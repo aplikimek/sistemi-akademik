@@ -1,0 +1,1766 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#2d7fd3">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Sistemi Akademik</title>
+<link rel="manifest" href="manifest.json">
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<!-- SheetJS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+/* ── RESET & BASE ─────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#f7f7f5;--bg2:#ffffff;--bg3:#efefeb;--bg4:#e4e3dd;
+  --text:#1a1a18;--text2:#5a5955;--text3:#909088;
+  --border:rgba(0,0,0,0.10);--border2:rgba(0,0,0,0.18);
+  --blue:#2d7fd3;--blue-l:#deedf9;--blue-d:#0a3d6e;
+  --teal:#179468;--teal-l:#d8f2e8;--teal-d:#074d35;
+  --red:#d94140;--red-l:#fbe8e8;--red-d:#721c1c;
+  --amber:#b06e12;--amber-l:#faebd4;--amber-d:#5c370a;
+  --green:#5a8d1a;--green-l:#e5f0d4;--green-d:#254009;
+  --purple:#6d68cc;--purple-l:#eceafb;--purple-d:#322e80;
+  --coral:#c85228;--coral-l:#fae5db;--coral-d:#461c0d;
+  --r:8px;--rl:12px;
+  --nav-h:56px;
+  --sidebar-w:220px;
+}
+@media(prefers-color-scheme:dark){
+  :root{--bg:#181816;--bg2:#222220;--bg3:#2a2a28;--bg4:#323230;
+    --text:#eeecea;--text2:#a8a7a1;--text3:#706f6a;
+    --border:rgba(255,255,255,0.09);--border2:rgba(255,255,255,0.18);
+    --blue-l:#0a3d6e;--blue-d:#90c4ef;
+    --teal-l:#074d35;--teal-d:#7dd4b0;
+    --red-l:#721c1c;--red-d:#f5a0a0;
+    --amber-l:#5c370a;--amber-d:#f5c070;
+    --green-l:#254009;--green-d:#aed470;
+    --purple-l:#322e80;--purple-d:#bab7f0;
+    --coral-l:#461c0d;--coral-d:#f0b09a;
+  }
+}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;overflow-x:hidden}
+
+/* ── LOGIN SCREEN ─────────────────────────────────────────── */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem;background:var(--bg)}
+.login-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--rl);padding:2.5rem 2rem;width:100%;max-width:400px}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:2rem}
+.login-logo-ic{width:40px;height:40px;background:var(--blue);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;flex-shrink:0}
+.login-logo-text{font-size:17px;font-weight:700}
+.login-logo-sub{font-size:12px;color:var(--text3);margin-top:1px}
+.form-group{margin-bottom:1rem}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.form-group input{width:100%;padding:10px 12px;border:0.5px solid var(--border2);border-radius:var(--r);background:var(--bg2);color:var(--text);font-size:14px}
+.form-group input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(45,127,211,.15)}
+.btn-login{width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:600;cursor:pointer;margin-top:.5rem;transition:background .15s}
+.btn-login:hover{background:var(--blue-d)}
+.btn-login:disabled{opacity:.6;cursor:not-allowed}
+#login-err{color:var(--red);font-size:13px;margin-top:.75rem;display:none}
+
+/* ── APP SHELL ────────────────────────────────────────────── */
+#app{display:none;height:100vh;overflow:hidden;position:relative}
+
+/* ── TOP NAV ──────────────────────────────────────────────── */
+.topnav{height:var(--nav-h);background:var(--bg2);border-bottom:0.5px solid var(--border);display:flex;align-items:center;padding:0 1rem;gap:10px;position:fixed;top:0;left:0;right:0;z-index:100}
+.menu-btn{background:none;border:none;cursor:pointer;padding:6px;border-radius:var(--r);color:var(--text2);display:none;flex-shrink:0}
+.menu-btn:hover{background:var(--bg3)}
+.nav-logo{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;white-space:nowrap;text-decoration:none;color:var(--text)}
+.nav-logo-ic{width:28px;height:28px;background:var(--blue);border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;flex-shrink:0}
+.nav-spacer{flex:1}
+.nav-user{display:flex;align-items:center;gap:8px;cursor:pointer;padding:5px 8px;border-radius:var(--r);border:none;background:transparent;color:var(--text)}
+.nav-user:hover{background:var(--bg3)}
+.nav-avatar{width:32px;height:32px;border-radius:50%;background:var(--blue-l);color:var(--blue-d);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.nav-user-info{text-align:left}
+.nav-user-name{font-size:13px;font-weight:600}
+.nav-user-role{font-size:11px;color:var(--text3)}
+.nav-badge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;text-transform:uppercase}
+.role-admin{background:var(--red-l);color:var(--red-d)}
+.role-profesor{background:var(--blue-l);color:var(--blue-d)}
+.role-sekretar{background:var(--teal-l);color:var(--teal-d)}
+.role-lexues{background:var(--bg3);color:var(--text2)}
+
+/* ── SIDEBAR ──────────────────────────────────────────────── */
+.sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:0.5px solid var(--border);position:fixed;top:var(--nav-h);bottom:0;left:0;z-index:90;overflow-y:auto;transition:transform .25s;padding:.75rem 0}
+.sidebar.hidden{transform:translateX(-100%)}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:89;top:var(--nav-h)}
+.sidebar-overlay.show{display:block}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 1rem;cursor:pointer;border:none;background:transparent;color:var(--text2);font-size:13px;font-weight:500;width:100%;text-align:left;border-radius:0;transition:all .15s}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--blue-l);color:var(--blue-d);font-weight:600}
+.nav-item.active .nav-icon{color:var(--blue)}
+.nav-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.nav-section{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:1rem 1rem .4rem}
+
+/* ── MAIN CONTENT ─────────────────────────────────────────── */
+.main-wrap{margin-left:var(--sidebar-w);margin-top:var(--nav-h);height:calc(100vh - var(--nav-h));overflow-y:auto;transition:margin-left .25s}
+.main-wrap.full{margin-left:0}
+.page{display:none;padding:1.5rem;max-width:1300px}
+.page.active{display:block}
+
+/* ── RESPONSIVE BREAKPOINTS ───────────────────────────────── */
+@media(max-width:768px){
+  .menu-btn{display:flex}
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main-wrap{margin-left:0}
+  .grid2,.grid3{grid-template-columns:1fr!important}
+  .metrics{grid-template-columns:repeat(2,1fr)!important}
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  th,td{white-space:nowrap}
+  .hide-mobile{display:none!important}
+  .page{padding:1rem}
+  .fbar{padding:10px;gap:6px}
+  .fbar .fg select,.fbar .fg input{min-width:100px;font-size:13px}
+  .mo-box{padding:1.25rem}
+  .btn-row{flex-wrap:wrap}
+  .nav-user-info{display:none}
+}
+@media(min-width:769px){
+  .sidebar-overlay{display:none!important}
+}
+
+/* ── CARDS ───────────────────────────────────────────────── */
+.card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem}
+.card-title{font-size:11px;font-weight:700;color:var(--text3);margin-bottom:1rem;text-transform:uppercase;letter-spacing:.06em}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1.5rem}
+.metric{background:var(--bg3);border-radius:var(--r);padding:1rem}
+.metric .lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.metric .val{font-size:22px;font-weight:700;line-height:1}
+.sec-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px}
+.sec-title{font-size:17px;font-weight:700}
+.btn-row{display:flex;gap:6px;flex-wrap:wrap}
+
+/* ── TABLES ──────────────────────────────────────────────── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 12px;border-bottom:0.5px solid var(--border2);font-weight:700;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+td{padding:8px 12px;border-bottom:0.5px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--bg3)}
+
+/* ── BADGES ──────────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.b-green{background:var(--green-l);color:var(--green-d)}
+.b-red{background:var(--red-l);color:var(--red-d)}
+.b-amber{background:var(--amber-l);color:var(--amber-d)}
+.b-blue{background:var(--blue-l);color:var(--blue-d)}
+.b-purple{background:var(--purple-l);color:var(--purple-d)}
+.b-teal{background:var(--teal-l);color:var(--teal-d)}
+.b-coral{background:var(--coral-l);color:var(--coral-d)}
+.b-gray{background:var(--bg3);color:var(--text2)}
+
+/* ── FORMS ───────────────────────────────────────────────── */
+.fbar{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:1rem;padding:12px;background:var(--bg3);border-radius:var(--r)}
+.fg{display:flex;flex-direction:column;gap:3px}
+.fg label{font-size:11px;color:var(--text3);font-weight:600}
+select,input[type=text],input[type=number],input[type=date],input[type=email],input[type=password]{padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--r);background:var(--bg2);color:var(--text);font-size:13px;min-width:120px;-webkit-appearance:none;appearance:none}
+select:focus,input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(45,127,211,.15)}
+.btn{padding:8px 14px;border:0.5px solid var(--border2);border-radius:var(--r);background:transparent;color:var(--text);cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;min-height:36px}
+.btn:hover{background:var(--bg3)}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{background:var(--blue-d)}
+.btn-teal{background:var(--teal);color:#fff;border-color:var(--teal)}
+.btn-teal:hover{background:var(--teal-d)}
+.btn-red{background:var(--red-l);color:var(--red-d);border-color:var(--red-l)}
+.btn-sm{padding:4px 10px;font-size:12px;min-height:28px}
+.btn-icon{padding:5px 8px}
+
+/* ── MODAL ───────────────────────────────────────────────── */
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:flex-end;justify-content:center;padding:0}
+.mo.open{display:flex}
+@media(min-width:600px){.mo{align-items:center;padding:1rem}}
+.mo-box{background:var(--bg2);border-radius:var(--rl) var(--rl) 0 0;padding:1.5rem;width:100%;max-height:92vh;overflow-y:auto}
+@media(min-width:600px){.mo-box{border-radius:var(--rl);max-width:540px}}
+.mo-box.wide{max-width:740px}
+.mo-drag{width:40px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 1.25rem;display:block}
+@media(min-width:600px){.mo-drag{display:none}}
+.mo-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem}
+.mo-title{font-size:16px;font-weight:700}
+.close-x{background:none;border:none;cursor:pointer;color:var(--text2);font-size:20px;padding:4px 7px;border-radius:var(--r);line-height:1}
+.close-x:hover{background:var(--bg3)}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.fr1{margin-bottom:10px}
+.fi{display:flex;flex-direction:column;gap:4px}
+.fi label{font-size:12px;color:var(--text3);font-weight:600}
+.fi select,.fi input{min-width:unset;width:100%}
+.flex-end{display:flex;justify-content:flex-end;gap:8px;margin-top:1.25rem}
+@media(max-width:480px){.fr{grid-template-columns:1fr}.flex-end{flex-direction:column-reverse}.flex-end .btn{width:100%;justify-content:center}}
+
+/* ── ALERTS ──────────────────────────────────────────────── */
+.alert{padding:10px 14px;border-radius:var(--r);font-size:13px;margin-bottom:1rem;border-left:3px solid}
+.al-info{background:var(--blue-l);color:var(--blue-d);border-color:var(--blue)}
+.al-warn{background:var(--amber-l);color:var(--amber-d);border-color:var(--amber)}
+.al-ok{background:var(--teal-l);color:var(--teal-d);border-color:var(--teal)}
+.al-err{background:var(--red-l);color:var(--red-d);border-color:var(--red)}
+
+/* ── TABS ────────────────────────────────────────────────── */
+.tab-row{display:flex;gap:2px;margin-bottom:1.25rem;background:var(--bg3);padding:3px;border-radius:var(--r);overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tab{padding:6px 12px;font-size:12px;font-weight:600;border:none;border-radius:6px;background:transparent;cursor:pointer;color:var(--text2);transition:all .15s;white-space:nowrap;flex-shrink:0}
+.tab.active{background:var(--bg2);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+
+/* ── MISC ────────────────────────────────────────────────── */
+.no-data{text-align:center;padding:2rem;color:var(--text3);font-size:13px}
+.chart-wrap{position:relative;width:100%}
+.st-row{display:flex;align-items:center;gap:8px}
+.av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+.av-sm{width:30px;height:30px;font-size:10px}
+.progress{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px}
+.editable{cursor:pointer;border-bottom:1px dashed var(--border2)}
+.editable:hover{color:var(--blue);border-bottom-color:var(--blue)}
+.inline-inp{padding:3px 6px;border:1px solid var(--blue);border-radius:4px;background:var(--bg2);color:var(--text);font-size:13px;width:60px;outline:none}
+.settings-item{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg3);border-radius:var(--r);font-size:13px;margin-bottom:4px}
+.upload-area{border:1.5px dashed var(--border2);border-radius:var(--rl);padding:2rem;text-align:center;cursor:pointer;color:var(--text2);transition:all .2s}
+.upload-area:hover{background:var(--bg3);border-color:var(--blue)}
+.bulk-tbl input[type=number]{min-width:55px;width:65px;padding:4px 6px}
+.bulk-tbl select{min-width:80px;width:90px;padding:4px 6px}
+.bulk-tbl td{padding:5px 8px}
+
+/* ── TOAST ───────────────────────────────────────────────── */
+#toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a18;color:#eee;padding:10px 20px;border-radius:20px;font-size:13px;z-index:9999;opacity:0;transition:all .2s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── SPINNER ─────────────────────────────────────────────── */
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+#global-loading{position:fixed;inset:0;background:var(--bg2);display:flex;align-items:center;justify-content:center;z-index:999;gap:12px;font-size:14px;color:var(--text2)}
+#global-loading.hidden{display:none}
+
+/* PRINT */
+@media print{
+  .topnav,.sidebar,.sidebar-overlay,.btn-row,.fbar,.tab-row,
+  button,.mo,#toast{display:none!important}
+  .page{display:block!important;padding:0}
+  .main-wrap{margin:0!important}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+
+<!-- GLOBAL LOADING -->
+<div id="global-loading">
+  <div class="spinner"></div>
+  Duke ngarkuar…
+</div>
+
+<!-- ── LOGIN ─────────────────────────────────────────────── -->
+<div id="login-screen" style="display:none">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-ic">A</div>
+      <div>
+        <div class="login-logo-text">Sistemi Akademik</div>
+        <div class="login-logo-sub">Menaxhim Akademik</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="email@institucioni.edu" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>Fjalëkalimi</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-login" id="btn-login" onclick="doLogin()">Hyr në sistem</button>
+    <div id="login-err"></div>
+    <div style="text-align:center;margin-top:1rem">
+      <button onclick="showForgot()" style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:13px">Harrova fjalëkalimin</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── APP ───────────────────────────────────────────────── -->
+<div id="app">
+
+  <!-- TOP NAV -->
+  <nav class="topnav">
+    <button class="menu-btn" onclick="toggleSidebar()" aria-label="Menu">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect y="3" width="18" height="1.5" rx=".75" fill="currentColor"/><rect y="8.25" width="18" height="1.5" rx=".75" fill="currentColor"/><rect y="13.5" width="18" height="1.5" rx=".75" fill="currentColor"/></svg>
+    </button>
+    <a class="nav-logo" href="#" onclick="showPage('dashboard')">
+      <div class="nav-logo-ic">A</div>
+      <span class="hide-mobile">Sistemi Akademik</span>
+    </a>
+    <div class="nav-spacer"></div>
+    <button class="nav-user" onclick="showPage('profili')">
+      <div class="nav-avatar" id="nav-avatar">?</div>
+      <div class="nav-user-info">
+        <div class="nav-user-name" id="nav-name">—</div>
+        <div class="nav-user-role"><span class="nav-badge" id="nav-role-badge">—</span></div>
+      </div>
+    </button>
+    <button class="btn btn-sm" onclick="doLogout()" style="margin-left:4px" title="Dil">⏻</button>
+  </nav>
+
+  <!-- SIDEBAR OVERLAY -->
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="nav-section">Kryesorja</div>
+    <button class="nav-item active" onclick="showPage('dashboard',this)"><span class="nav-icon">📊</span>Pasqyra</button>
+    <button class="nav-item" onclick="showPage('mungesa',this)" id="nav-mungesa"><span class="nav-icon">📋</span>Mungesa</button>
+    <button class="nav-item" onclick="showPage('rezultate',this)" id="nav-rezultate"><span class="nav-icon">🎓</span>Rezultate</button>
+    <button class="nav-item" onclick="showPage('studentet',this)"><span class="nav-icon">👥</span>Studentët</button>
+    <div class="nav-section">Menaxhim</div>
+    <button class="nav-item" onclick="showPage('importi',this)"><span class="nav-icon">📂</span>Import XLS</button>
+    <button class="nav-item" onclick="showPage('raportet',this)"><span class="nav-icon">📄</span>Raportet</button>
+    <button class="nav-item konfig-only" onclick="showPage('konfig',this)" id="nav-konfig"><span class="nav-icon">⚙</span>Konfigurim</button>
+    <button class="nav-item admin-only" onclick="showPage('perdoruesit',this)" id="nav-users"><span class="nav-icon">🔐</span>Përdoruesit</button>
+    <div class="nav-section">Llogaria</div>
+    <button class="nav-item" onclick="showPage('profili',this)"><span class="nav-icon">👤</span>Profili im</button>
+    <button class="nav-item" onclick="doLogout()" style="color:var(--red-d)"><span class="nav-icon">⏻</span>Dil</button>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-wrap" id="main-wrap">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="sec-head"><div class="sec-title">Pasqyra</div>
+        <div class="fg"><label>Viti akademik</label><select id="d-vit" onchange="renderDash()"></select></div>
+      </div>
+      <div class="metrics" id="d-metrics"></div>
+      <div class="grid2">
+        <div class="card"><div class="card-title">Mungesa sipas muajve</div><div class="chart-wrap" style="height:200px"><canvas id="c-muaj"></canvas></div></div>
+        <div class="card"><div class="card-title">Nota mesatare sipas lëndëve</div><div class="chart-wrap" style="height:200px"><canvas id="c-lendet"></canvas></div></div>
+      </div>
+      <div class="grid2">
+        <div class="card"><div class="card-title">Studentë me mungesa të larta</div>
+          <div class="tbl-wrap"><table><thead><tr><th>Studenti</th><th>Grupi</th><th>Orë</th><th>Status</th></tr></thead><tbody id="d-topmung"></tbody></table></div>
+        </div>
+        <div class="card"><div class="card-title">Shpërndarja e notave</div><div class="chart-wrap" style="height:200px"><canvas id="c-notadist"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- MUNGESA -->
+    <div class="page" id="page-mungesa">
+      <div class="sec-head">
+        <div class="sec-title">Mungesa</div>
+        <div class="btn-row" id="mung-btns">
+          <button class="btn btn-primary" onclick="openMo('mo-mung')" id="btn-add-mung">+ Shto mungesë</button>
+          <button class="btn btn-teal" onclick="openMo('mo-bulk-mung')" id="btn-bulk-mung">📋 Sipas grupit</button>
+        </div>
+      </div>
+      <div class="fbar">
+        <div class="fg"><label>Grupi</label><select id="fm-grup" onchange="renderMung()"></select></div>
+        <div class="fg"><label>Lënda</label><select id="fm-lende" onchange="renderMung()"></select></div>
+        <div class="fg hide-mobile"><label>Viti akademik</label><select id="fm-vit" onchange="renderMung()"></select></div>
+        <div class="fg hide-mobile"><label>Tipi</label><select id="fm-tip" onchange="renderMung()"><option value="">Të gjitha</option><option value="J">Të justifikuara</option><option value="P">Të pajustifikuara</option></select></div>
+        <div class="fg"><label>Kërko</label><input type="text" id="fm-q" placeholder="Emri..." oninput="renderMung()" style="min-width:100px"></div>
+      </div>
+      <div class="card">
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Data</th><th>Studenti</th><th class="hide-mobile">Grupi</th><th>Lënda</th><th>Orë</th><th class="hide-mobile">Tipi</th><th class="hide-mobile">Arsyeja</th><th style="width:80px"></th></tr></thead>
+          <tbody id="tbl-mung"></tbody>
+        </table></div>
+        <div id="mung-empty" class="no-data" style="display:none">Nuk ka mungesa për kriteret e zgjedhura.</div>
+        <div id="mung-loading" class="no-data"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- REZULTATE -->
+    <div class="page" id="page-rezultate">
+      <div class="sec-head">
+        <div class="sec-title">Rezultate Provimesh</div>
+        <div class="btn-row" id="rez-btns">
+          <button class="btn btn-primary" onclick="openMo('mo-rez')" id="btn-add-rez">+ Shto rezultat</button>
+          <button class="btn btn-teal" onclick="openMo('mo-bulk-rez')" id="btn-bulk-rez">📋 Sipas grupit</button>
+        </div>
+      </div>
+      <div class="fbar">
+        <div class="fg"><label>Sesioni</label><select id="fr-ses" onchange="renderRez()"></select></div>
+        <div class="fg"><label>Lënda</label><select id="fr-lende" onchange="renderRez()"></select></div>
+        <div class="fg"><label>Grupi</label><select id="fr-grup" onchange="renderRez()"></select></div>
+        <div class="fg hide-mobile"><label>Rezultati</label><select id="fr-kaloi" onchange="renderRez()"><option value="">Të gjithë</option><option value="1">Kaluan</option><option value="0">Nuk kaluan</option></select></div>
+        <div class="fg"><label>Kërko</label><input type="text" id="fr-q" placeholder="Emri..." oninput="renderRez()" style="min-width:100px"></div>
+      </div>
+      <div class="card">
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Studenti</th><th class="hide-mobile">Grupi</th><th>Lënda</th><th class="hide-mobile">Sesioni</th><th>Nota</th><th class="hide-mobile">Kaloi</th><th style="width:80px"></th></tr></thead>
+          <tbody id="tbl-rez"></tbody>
+        </table></div>
+        <div id="rez-loading" class="no-data"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- STUDENTET -->
+    <div class="page" id="page-studentet">
+      <div class="sec-head">
+        <div class="sec-title">Studentët</div>
+        <div class="btn-row">
+          <button class="btn btn-teal" onclick="openMo('mo-imp-st')" id="btn-imp-st">📥 Import XLS</button>
+          <button class="btn btn-primary" onclick="openMo('mo-student')" id="btn-add-st">+ Shto student</button>
+        </div>
+      </div>
+      <div class="fbar">
+        <div class="fg"><label>Kërko</label><input type="text" id="fs-q" placeholder="Emri, ID..." oninput="renderStudentet()" style="min-width:120px"></div>
+        <div class="fg"><label>Grupi</label><select id="fs-grup" onchange="renderStudentet()"></select></div>
+        <div class="fg hide-mobile"><label>Niveli</label><select id="fs-nivel" onchange="renderStudentet()"></select></div>
+        <div class="fg hide-mobile"><label>Fakulteti</label><select id="fs-fak" onchange="renderStudentet()"></select></div>
+        <div class="fg hide-mobile"><label>Status</label><select id="fs-stat" onchange="renderStudentet()"><option value="">Të gjithë</option><option value="ok">Mirë</option><option value="risk">Monitorim</option></select></div>
+      </div>
+      <div class="card">
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Studenti</th><th class="hide-mobile">Fakulteti / Programi</th><th class="hide-mobile">Niveli</th><th>Grupi</th><th class="hide-mobile">Viti</th><th>Mungesa</th><th class="hide-mobile">Mesatare</th><th style="width:80px"></th></tr></thead>
+          <tbody id="tbl-st"></tbody>
+        </table></div>
+        <div id="st-loading" class="no-data"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- IMPORT -->
+    <div class="page" id="page-importi">
+      <div class="sec-head"><div class="sec-title">Import nga XLS / XLSX / CSV</div></div>
+      <div class="card">
+        <div class="tab-row" id="imp-tabs">
+          <button class="tab active" onclick="setImpType('studentet',this)">👥 Studentë</button>
+          <button class="tab" onclick="setImpType('mungesa',this)">📋 Mungesa</button>
+          <button class="tab" onclick="setImpType('rezultate',this)">🎓 Rezultate</button>
+        </div>
+        <div id="imp-format-hint" class="alert al-info"></div>
+        <div class="upload-area" onclick="document.getElementById('file-inp').click()" id="drop-zone">
+          <div style="font-size:32px;margin-bottom:8px">📁</div>
+          <div style="font-weight:600;margin-bottom:4px">Kliko ose zvarrit skedarin këtu</div>
+          <div style="font-size:12px;color:var(--text3)">.xlsx · .xls · .csv</div>
+        </div>
+        <input type="file" id="file-inp" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFile(this)">
+        <div style="margin-top:1rem;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" onclick="dlTpl()">⬇ Shkarko shabllon</button>
+        </div>
+      </div>
+      <div id="imp-preview" style="display:none">
+        <div id="imp-alert" class="alert al-info"></div>
+        <div class="card">
+          <div class="card-title" id="prev-title">Parapamja</div>
+          <div class="tbl-wrap"><table><thead id="prev-head"></thead><tbody id="prev-body"></tbody></table></div>
+          <div class="flex-end">
+            <button class="btn btn-teal" onclick="confirmImport()">✓ Konfirmo importin</button>
+            <button class="btn" onclick="cancelImport()">Anulo</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RAPORTET -->
+    <div class="page" id="page-raportet">
+      <div class="sec-head"><div class="sec-title">Raportet</div></div>
+      <div class="tab-row">
+        <button class="tab active" onclick="showRap('rp-perm',this)">📊 Përmbledhje</button>
+        <button class="tab" onclick="showRap('rp-grup',this)">👥 Grupet</button>
+        <button class="tab" onclick="showRap('rp-lende',this)">📚 Lëndët</button>
+        <button class="tab" onclick="showRap('rp-stud',this)">🧑 Kartela</button>
+        <button class="tab" onclick="showRap('rp-rrezik',this)">⚠ Rrezik</button>
+        <button class="tab" onclick="showRap('rp-pdf',this)">🖨 Printo</button>
+      </div>
+      <div id="rp-perm">
+        <div class="metrics" id="rp-metrics"></div>
+        <div class="grid2">
+          <div class="card"><div class="card-title">Mungesa sipas grupeve</div><div class="chart-wrap" style="height:220px"><canvas id="c-rpgrup"></canvas></div></div>
+          <div class="card"><div class="card-title">% Kalueshmëri sipas sesioneve</div><div class="chart-wrap" style="height:220px"><canvas id="c-rpses"></canvas></div></div>
+        </div>
+        <div class="card"><div class="card-title">Eksporto</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" onclick="exportData('mungesa')">⬇ CSV Mungesa</button>
+            <button class="btn" onclick="exportData('rezultate')">⬇ CSV Rezultate</button>
+            <button class="btn" onclick="exportData('studentet')">⬇ CSV Studentët</button>
+            <button class="btn btn-primary" onclick="window.print()">🖨 Printo</button>
+          </div>
+        </div>
+      </div>
+      <div id="rp-grup" style="display:none">
+        <div class="card"><div class="card-title">Statistika sipas grupeve</div>
+          <div class="tbl-wrap"><table><thead><tr><th>Grupi</th><th>Studentë</th><th>Mungesa</th><th>Mesatare</th><th>% Kalueshmëri</th><th>Status</th></tr></thead><tbody id="tbl-rpgrup"></tbody></table></div>
+        </div>
+      </div>
+      <div id="rp-lende" style="display:none">
+        <div class="card"><div class="card-title">Statistika sipas lëndëve</div>
+          <div class="tbl-wrap"><table><thead><tr><th>Lënda</th><th>Mungesa</th><th>Mesatare</th><th>% Kalueshmëri</th><th>Provime</th></tr></thead><tbody id="tbl-rplende"></tbody></table></div>
+        </div>
+      </div>
+      <div id="rp-stud" style="display:none">
+        <div class="card" style="margin-bottom:1rem"><div class="fi"><label>Zgjidh studentin</label><select id="sel-st-rap" onchange="renderStudKartela()" style="max-width:300px"></select></div></div>
+        <div id="stud-kartela"></div>
+      </div>
+      <div id="rp-rrezik" style="display:none">
+        <div class="alert al-warn">Studentët me mbi <b>20 orë mungesa</b> ose mesatare nën <b>5.0</b>.</div>
+        <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Studenti</th><th>Grupi</th><th>Mungesa</th><th>Mesatare</th><th>Shkak</th></tr></thead><tbody id="tbl-rprrezik"></tbody></table></div></div>
+      </div>
+      <div id="rp-pdf" style="display:none">
+        <div class="grid2">
+          <div class="card"><div class="card-title">🖨 Printo Mungesa</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div class="fi"><label>Grupi</label><select id="pdf-mg"></select></div>
+              <div class="fi"><label>Lënda</label><select id="pdf-ml"></select></div>
+              <div class="fi"><label>Viti akademik</label><select id="pdf-mv"></select></div>
+              <div class="fi"><label>Data nga</label><input type="date" id="pdf-md1"></div>
+              <div class="fi"><label>Data deri</label><input type="date" id="pdf-md2"></div>
+              <button class="btn btn-primary" onclick="printMungesa()">🖨 Printo</button>
+            </div>
+          </div>
+          <div class="card"><div class="card-title">🖨 Printo Rezultate</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div class="fi"><label>Grupi</label><select id="pdf-rg"></select></div>
+              <div class="fi"><label>Lënda</label><select id="pdf-rl"></select></div>
+              <div class="fi"><label>Sesioni</label><select id="pdf-rs"></select></div>
+              <button class="btn btn-primary" onclick="printRezultate()">🖨 Printo</button>
+            </div>
+          </div>
+        </div>
+        <div id="pdf-area" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
+            <span id="pdf-title" style="font-weight:700;font-size:15px"></span>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-primary" onclick="window.print()">🖨 Printo / PDF</button>
+              <button class="btn" onclick="ge('pdf-area').style.display='none'">✕ Mbyll</button>
+            </div>
+          </div>
+          <div id="pdf-content" class="card"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KONFIGURIM -->
+    <div class="page" id="page-konfig">
+      <div class="sec-head"><div class="sec-title">Konfigurim</div></div>
+      <div class="grid3">
+        <div class="card"><div class="card-title">Lëndët</div><div id="list-lendet"></div><div style="display:flex;gap:6px;margin-top:10px"><input type="text" id="inp-lende-new" placeholder="Emri..." style="flex:1"><button class="btn btn-primary btn-sm" onclick="addCfg('lendet')">+ Shto</button></div></div>
+        <div class="card"><div class="card-title">Grupet</div><div id="list-grupet"></div><div style="display:flex;gap:6px;margin-top:10px"><input type="text" id="inp-grup-new" placeholder="Emri..." style="flex:1"><button class="btn btn-primary btn-sm" onclick="addCfg('grupet')">+ Shto</button></div></div>
+        <div class="card"><div class="card-title">Vitet studimeve</div><div id="list-vst"></div><div style="display:flex;gap:6px;margin-top:10px"><input type="text" id="inp-vst-new" placeholder="Viti I..." style="flex:1"><button class="btn btn-primary btn-sm" onclick="addCfg('vitet_st')">+ Shto</button></div></div>
+      </div>
+      <div class="grid2">
+        <div class="card"><div class="card-title">Vitet akademike</div><div id="list-vakad"></div><div style="display:flex;gap:6px;margin-top:10px"><input type="text" id="inp-vakad-new" placeholder="2025-2026" style="flex:1"><button class="btn btn-primary btn-sm" onclick="addCfg('vitet_akad')">+ Shto</button></div></div>
+        <div class="card"><div class="card-title">Sesioneт provimesh</div><div id="list-ses"></div><div style="display:flex;gap:6px;margin-top:10px"><input type="text" id="inp-ses-new" placeholder="Qershor 2026" style="flex:1"><button class="btn btn-primary btn-sm" onclick="addCfg('sesionet')">+ Shto</button></div></div>
+      </div>
+      <div class="grid3">
+        <div class="card"><div class="card-title">Nivelet</div><div id="list-niv"></div><div style="display:flex;gap:6px;margin-top:10px"><input type="text" id="inp-niv-new" placeholder="Bachelor..." style="flex:1"><button class="btn btn-primary btn-sm" onclick="addCfg('nivelet')">+ Shto</button></div></div>
+        <div class="card"><div class="card-title">Programet mësimore</div><div id="list-prog"></div><div style="display:flex;gap:6px;margin-top:10px"><input type="text" id="inp-prog-new" placeholder="Programi..." style="flex:1"><button class="btn btn-primary btn-sm" onclick="addCfg('programet')">+ Shto</button></div></div>
+        <div class="card"><div class="card-title">Fakultetet</div><div id="list-fak"></div><div style="display:flex;gap:6px;margin-top:10px"><input type="text" id="inp-fak-new" placeholder="Fakulteti..." style="flex:1"><button class="btn btn-primary btn-sm" onclick="addCfg('fakultetet')">+ Shto</button></div></div>
+      </div>
+    </div>
+
+    <!-- PERDORUESIT (admin only) -->
+    <div class="page" id="page-perdoruesit">
+      <div class="sec-head"><div class="sec-title">Menaxhimi i Përdoruesve</div>
+        <button class="btn btn-primary" onclick="openMo('mo-invite')">+ Fto përdorues</button>
+      </div>
+      <div class="card">
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Email</th><th>Emri</th><th>Roli</th><th>Aktiv</th><th style="width:100px"></th></tr></thead>
+          <tbody id="tbl-users"></tbody>
+        </table></div>
+        <div id="users-loading" class="no-data"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- PROFILI -->
+    <div class="page" id="page-profili">
+      <div class="sec-head"><div class="sec-title">Profili im</div></div>
+      <div class="card" style="max-width:500px">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:1.5rem">
+          <div class="av" id="profile-av" style="width:52px;height:52px;font-size:18px;background:var(--blue-l);color:var(--blue-d)">?</div>
+          <div>
+            <div id="profile-name" style="font-size:18px;font-weight:700">—</div>
+            <div id="profile-email" style="color:var(--text2);font-size:13px">—</div>
+            <span id="profile-role" class="nav-badge" style="margin-top:4px;display:inline-block">—</span>
+          </div>
+        </div>
+        <div class="fr">
+          <div class="fi"><label>Emri</label><input type="text" id="prof-emri"></div>
+          <div class="fi"><label>Mbiemri</label><input type="text" id="prof-mbiemri"></div>
+        </div>
+        <div class="fr1"><div class="fi"><label>Fjalëkalim i ri (lëre bosh nëse nuk ndryshon)</label><input type="password" id="prof-pass" placeholder="Fjalëkalim i ri..."></div></div>
+        <button class="btn btn-primary" onclick="saveProfile()">💾 Ruaj ndryshimet</button>
+      </div>
+    </div>
+
+  </div><!-- /main-wrap -->
+</div><!-- /app -->
+
+<!-- ── TOAST ─────────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<!-- ── MODALS ────────────────────────────────────────────── -->
+
+<!-- SHTO / EDITO STUDENT -->
+<div class="mo" id="mo-student">
+  <div class="mo-box wide">
+    <span class="mo-drag"></span>
+    <div class="mo-head"><div class="mo-title" id="mo-st-title">Regjistro Student</div><button class="close-x" onclick="closeMo('mo-student')">✕</button></div>
+    <input type="hidden" id="i-stid">
+    <div class="fr"><div class="fi"><label>Emri *</label><input type="text" id="i-semri"></div><div class="fi"><label>Mbiemri *</label><input type="text" id="i-smbiemri"></div></div>
+    <div class="fr"><div class="fi"><label>Fakulteti</label><select id="i-sfak"></select></div><div class="fi"><label>Programi</label><select id="i-sprog"></select></div></div>
+    <div class="fr"><div class="fi"><label>Niveli</label><select id="i-sniv"></select></div><div class="fi"><label>Grupi</label><select id="i-sgrupi"></select></div></div>
+    <div class="fr"><div class="fi"><label>Viti studimeve</label><select id="i-sviti"></select></div><div class="fi"><label>Viti regjistrimit</label><select id="i-svregj"></select></div></div>
+    <div class="flex-end"><button class="btn btn-primary" onclick="saveSt()">Ruaj</button><button class="btn" onclick="closeMo('mo-student')">Anulo</button></div>
+  </div>
+</div>
+
+<!-- SHTO MUNGESË -->
+<div class="mo" id="mo-mung">
+  <div class="mo-box">
+    <span class="mo-drag"></span>
+    <div class="mo-head"><div class="mo-title" id="mo-mung-title">Regjistro Mungesë</div><button class="close-x" onclick="closeMo('mo-mung')">✕</button></div>
+    <input type="hidden" id="i-mid">
+    <div class="fr"><div class="fi"><label>Studenti *</label><select id="i-mst"></select></div><div class="fi"><label>Lënda *</label><select id="i-mlende"></select></div></div>
+    <div class="fr"><div class="fi"><label>Data *</label><input type="date" id="i-mdata"></div><div class="fi"><label>Orë</label><input type="number" id="i-more" min="1" max="8" value="2"></div></div>
+    <div class="fr"><div class="fi"><label>Tipi</label><select id="i-mtipi"><option value="J">E justifikuar</option><option value="P">E pajustifikuar</option></select></div><div class="fi"><label>Arsyeja</label><input type="text" id="i-marsye" placeholder="Sëmundje..."></div></div>
+    <div class="fr1"><div class="fi"><label>Viti akademik</label><select id="i-mvit"></select></div></div>
+    <div class="flex-end"><button class="btn btn-primary" onclick="saveMung()">Regjistro</button><button class="btn" onclick="closeMo('mo-mung')">Anulo</button></div>
+  </div>
+</div>
+
+<!-- BULK MUNGESA -->
+<div class="mo" id="mo-bulk-mung">
+  <div class="mo-box wide">
+    <span class="mo-drag"></span>
+    <div class="mo-head"><div class="mo-title">Regjistro mungesa sipas grupit</div><button class="close-x" onclick="closeMo('mo-bulk-mung')">✕</button></div>
+    <div class="fr"><div class="fi"><label>Grupi *</label><select id="bm-grup" onchange="loadBulkSt()"></select></div><div class="fi"><label>Lënda *</label><select id="bm-lende"></select></div></div>
+    <div class="fr"><div class="fi"><label>Data *</label><input type="date" id="bm-data"></div><div class="fi"><label>Viti akademik</label><select id="bm-vit"></select></div></div>
+    <div class="fr"><div class="fi"><label>Tipi default</label><select id="bm-tip"><option value="P">E pajustifikuar</option><option value="J">E justifikuar</option></select></div><div class="fi"><label>Orë default</label><input type="number" id="bm-ore" min="1" max="8" value="2"></div></div>
+    <button class="btn btn-sm" onclick="loadBulkSt()" style="margin-bottom:8px">↻ Ngarko studentët</button>
+    <div class="tbl-wrap bulk-tbl"><table>
+      <thead><tr><th><input type="checkbox" id="chk-all" onchange="document.querySelectorAll('.bm-chk').forEach(c=>c.checked=this.checked)" checked></th><th>Studenti</th><th>Orë</th><th>Tipi</th><th>Arsyeja</th></tr></thead>
+      <tbody id="bulk-mung-body"></tbody>
+    </table></div>
+    <div id="bulk-empty" class="no-data" style="display:none">Zgjidh grupin.</div>
+    <div class="flex-end"><button class="btn btn-teal" onclick="saveBulkMung()">✓ Regjistro</button><button class="btn" onclick="closeMo('mo-bulk-mung')">Anulo</button></div>
+  </div>
+</div>
+
+<!-- SHTO REZULTAT -->
+<div class="mo" id="mo-rez">
+  <div class="mo-box">
+    <span class="mo-drag"></span>
+    <div class="mo-head"><div class="mo-title" id="mo-rez-title">Regjistro Rezultat</div><button class="close-x" onclick="closeMo('mo-rez')">✕</button></div>
+    <input type="hidden" id="i-rid">
+    <div class="fr"><div class="fi"><label>Studenti *</label><select id="i-rst"></select></div><div class="fi"><label>Lënda *</label><select id="i-rlende"></select></div></div>
+    <div class="fr"><div class="fi"><label>Sesioni</label><select id="i-rses"></select></div><div class="fi"><label>Nota (1–10) *</label><input type="number" id="i-rnota" min="1" max="10" value="7"></div></div>
+    <div class="flex-end"><button class="btn btn-primary" onclick="saveRez()">Regjistro</button><button class="btn" onclick="closeMo('mo-rez')">Anulo</button></div>
+  </div>
+</div>
+
+<!-- BULK REZULTATE -->
+<div class="mo" id="mo-bulk-rez">
+  <div class="mo-box wide">
+    <span class="mo-drag"></span>
+    <div class="mo-head"><div class="mo-title">Rezultate sipas grupit</div><button class="close-x" onclick="closeMo('mo-bulk-rez')">✕</button></div>
+    <div class="fr"><div class="fi"><label>Grupi *</label><select id="br-grup" onchange="loadBulkRezSt()"></select></div><div class="fi"><label>Lënda *</label><select id="br-lende"></select></div></div>
+    <div class="fr1"><div class="fi"><label>Sesioni</label><select id="br-ses"></select></div></div>
+    <button class="btn btn-sm" onclick="loadBulkRezSt()" style="margin-bottom:8px">↻ Ngarko studentët</button>
+    <div class="tbl-wrap bulk-tbl"><table>
+      <thead><tr><th>Studenti</th><th>Nota (1–10)</th><th>Nota aktuale</th></tr></thead>
+      <tbody id="bulk-rez-body"></tbody>
+    </table></div>
+    <div id="bulk-rez-empty" class="no-data" style="display:none">Zgjidh grupin.</div>
+    <div class="flex-end"><button class="btn btn-teal" onclick="saveBulkRez()">✓ Regjistro notat</button><button class="btn" onclick="closeMo('mo-bulk-rez')">Anulo</button></div>
+  </div>
+</div>
+
+<!-- IMPORT STUDENTË -->
+<div class="mo" id="mo-imp-st">
+  <div class="mo-box wide">
+    <span class="mo-drag"></span>
+    <div class="mo-head"><div class="mo-title">Import studentë nga XLS</div><button class="close-x" onclick="closeMo('mo-imp-st')">✕</button></div>
+    <div class="alert al-info">Formati: <code>emri | mbiemri | grupi | viti | viti_regjistrimit</code></div>
+    <div class="upload-area" onclick="document.getElementById('st-file-inp').click()">
+      <div style="font-size:28px;margin-bottom:8px">📂</div>
+      <div style="font-weight:600">Kliko ose zvarrit skedarin</div>
+    </div>
+    <input type="file" id="st-file-inp" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleStFile(this)">
+    <div id="st-imp-preview" style="display:none;margin-top:1rem">
+      <div class="fr">
+        <div class="fi"><label>Grupi default</label><select id="imp-st-gdef"></select></div>
+        <div class="fi"><label>Viti studimeve default</label><select id="imp-st-vdef"></select></div>
+      </div>
+      <div class="tbl-wrap" style="max-height:280px;overflow-y:auto">
+        <table><thead><tr><th><input type="checkbox" id="imp-st-chkall" checked onchange="document.querySelectorAll('.ist-chk').forEach(c=>c.checked=this.checked)"></th><th>Emri</th><th>Mbiemri</th><th>Grupi</th><th>Viti</th><th>Status</th></tr></thead>
+        <tbody id="imp-st-body"></tbody></table>
+      </div>
+      <div id="imp-st-dup" class="alert al-warn" style="display:none;margin-top:8px"></div>
+      <div class="flex-end">
+        <button class="btn btn-teal" onclick="confirmStImp()">✓ Importo</button>
+        <button class="btn" onclick="resetStImp()">← Ngarko tjetër</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FTO PERDORUES (admin) -->
+<div class="mo" id="mo-invite">
+  <div class="mo-box">
+    <span class="mo-drag"></span>
+    <div class="mo-head"><div class="mo-title">Fto përdorues të ri</div><button class="close-x" onclick="closeMo('mo-invite')">✕</button></div>
+    <div class="fr"><div class="fi"><label>Email *</label><input type="email" id="inv-email" placeholder="email@institucioni.edu"></div><div class="fi"><label>Roli *</label><select id="inv-role"><option value="lexues">Lexues</option><option value="profesor">Profesor</option><option value="sekretar">Sekretar</option><option value="admin">Admin</option></select></div></div>
+    <div class="fr"><div class="fi"><label>Emri</label><input type="text" id="inv-emri"></div><div class="fi"><label>Mbiemri</label><input type="text" id="inv-mbiemri"></div></div>
+    <div class="alert al-info">Përdoruesi do të marrë email me linkun e konfirmimit.</div>
+    <div class="flex-end"><button class="btn btn-primary" onclick="inviteUser()">📧 Dërgo ftesën</button><button class="btn" onclick="closeMo('mo-invite')">Anulo</button></div>
+  </div>
+</div>
+
+<!-- ── PRINT DOC ──────────────────────────────────────────── -->
+<div id="print-doc" style="display:none;padding:2rem"></div>
+
+<!-- ── SCRIPTS ────────────────────────────────────────────── -->
+<script>
+// ═══════════════════════════════════════════════════════════
+//  KONFIGURO SUPABASE — NDRYSHO KËTO DY VLERA!
+// ═══════════════════════════════════════════════════════════
+const SUPA_URL = 'https://waqimzkfsfxnwngbasfs.supabase.co';
+const SUPA_KEY = 'sb_publishable_0MdhpXPC-u1DqX2NDFm0sw_XSUSz6xe';
+// ───────────────────────────────────────────────────────────
+
+const { createClient } = supabase;
+const db = createClient(SUPA_URL, SUPA_KEY);
+
+// ── STATE ─────────────────────────────────────────────────
+let ME = null;      // profili i userit aktual
+let ROLE = null;    // roli i tij
+let CFG = {};       // konfigurimet: lendet, grupet, etj.
+let cache = {       // cache lokal për shpejtësi
+  studentet: [],
+  mungesa: [],
+  rezultate: []
+};
+const charts = {};
+const dc = id => { if(charts[id]) try { charts[id].destroy() } catch(e) {} delete charts[id] };
+const ge = id => document.getElementById(id);
+const val = id => { const el=ge(id); return el ? el.value : '' };
+const today = () => new Date().toISOString().split('T')[0];
+const inits = s => s ? (s.emri[0]+(s.mbiemri||'?')[0]).toUpperCase() : '??';
+const nc = n => n>=8 ? '#179468' : n>=5 ? '#2d7fd3' : '#d94140';
+const totM = sid => cache.mungesa.filter(m=>m.sid===sid).reduce((a,b)=>a+b.ore,0);
+const avgN = sid => { const r=cache.rezultate.filter(x=>x.sid===sid); return r.length ? r.reduce((a,b)=>a+b.nota,0)/r.length : null };
+const pctK = sid => { const r=cache.rezultate.filter(x=>x.sid===sid); return r.length ? Math.round(r.filter(x=>x.nota>=5).length/r.length*100) : null };
+const stOb = sid => cache.studentet.find(s=>s.id===sid);
+const stNm = sid => { const s=stOb(sid); return s ? s.emri+' '+s.mbiemri : sid };
+
+// ── TOAST ────────────────────────────────────────────────
+function toast(msg, ms=2200) {
+  const t = ge('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+// ── AUTH ──────────────────────────────────────────────────
+async function init() {
+  const { data: { session } } = await db.auth.getSession();
+  if (session) {
+    await loadUser(session.user);
+    showApp();
+  } else {
+    showLogin();
+  }
+  db.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      await loadUser(session.user);
+      showApp();
+    } else if (event === 'SIGNED_OUT') {
+      showLogin();
+    }
+  });
+}
+
+async function loadUser(user) {
+  const { data } = await db.from('profiles').select('*').eq('id', user.id).single();
+  ME = data || { id: user.id, email: user.email, emri: user.email.split('@')[0], mbiemri: '', roli: 'lexues' };
+  ROLE = ME.roli;
+  // load configs
+  await loadConfig();
+  // load initial data
+  await Promise.all([loadStudentet(), loadMungesa(), loadRezultate()]);
+  updateNavUI();
+}
+
+async function loadConfig() {
+  const tables = ['config_lendet','config_grupet','config_vitet_st','config_vitet_akad','config_sesionet','config_nivelet','config_programet','config_fakultetet'];
+  const results = await Promise.all(tables.map(t => db.from(t).select('emri').order('emri')));
+  CFG.lendet = results[0].data?.map(r=>r.emri) || [];
+  CFG.grupet = results[1].data?.map(r=>r.emri) || [];
+  CFG.vitet_st = results[2].data?.map(r=>r.emri) || [];
+  CFG.vitet_akad = results[3].data?.map(r=>r.emri) || [];
+  CFG.sesionet = results[4].data?.map(r=>r.emri) || [];
+  CFG.nivelet = results[5].data?.map(r=>r.emri) || [];
+  CFG.programet = results[6].data?.map(r=>r.emri) || [];
+  CFG.fakultetet = results[7].data?.map(r=>r.emri) || [];
+  popSelects();
+}
+
+async function loadStudentet() {
+  const { data } = await db.from('studentet').select('*').eq('aktiv', true).order('mbiemri');
+  cache.studentet = data || [];
+}
+async function loadMungesa() {
+  const { data } = await db.from('mungesa').select('*').order('data', {ascending: false});
+  cache.mungesa = data || [];
+}
+async function loadRezultate() {
+  const { data } = await db.from('rezultate').select('*').order('created_at', {ascending: false});
+  cache.rezultate = data || [];
+}
+
+async function doLogin() {
+  const email = ge('login-email').value.trim();
+  const pass = ge('login-pass').value;
+  const btn = ge('btn-login');
+  const err = ge('login-err');
+  if (!email || !pass) { showErr('Plotëso email dhe fjalëkalimin!'); return; }
+  btn.disabled = true; btn.textContent = 'Duke hyrë…';
+  const { error } = await db.auth.signInWithPassword({ email, password: pass });
+  if (error) {
+    showErr('Email ose fjalëkalim i gabuar.');
+    btn.disabled = false; btn.textContent = 'Hyr në sistem';
+  }
+}
+
+async function doLogout() {
+  await db.auth.signOut();
+}
+
+async function showForgot() {
+  const email = prompt('Shkruaj email-in tënd:');
+  if (!email) return;
+  const { error } = await db.auth.resetPasswordForEmail(email);
+  if (!error) toast('Email u dërgua! Kontrollo kutinë hyrëse.');
+  else toast('Gabim: ' + error.message, 4000);
+}
+
+function showErr(msg) {
+  const el = ge('login-err');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// ── UI SHOW/HIDE ──────────────────────────────────────────
+function showLogin() {
+  ge('global-loading').classList.add('hidden');
+  ge('login-screen').style.display = 'flex';
+  ge('app').style.display = 'none';
+}
+
+function showApp() {
+  ge('global-loading').classList.add('hidden');
+  ge('login-screen').style.display = 'none';
+  ge('app').style.display = 'block';
+  showPage('dashboard');
+}
+
+function updateNavUI() {
+  const name = (ME.emri||'') + (ME.mbiemri ? ' '+ME.mbiemri : '');
+  const initials = ((ME.emri||'?')[0] + (ME.mbiemri||'?')[0]).toUpperCase();
+  ge('nav-avatar').textContent = initials;
+  ge('nav-name').textContent = name || ME.email;
+  const roleLabel = {admin:'Admin',profesor:'Profesor',sekretar:'Sekretar',lexues:'Lexues'};
+  const roleCls = {admin:'role-admin',profesor:'role-profesor',sekretar:'role-sekretar',lexues:'role-lexues'};
+  ge('nav-role-badge').textContent = roleLabel[ROLE] || ROLE;
+  ge('nav-role-badge').className = 'nav-badge ' + (roleCls[ROLE]||'');
+
+  // Show/hide admin-only and write elements
+  const canWrite = ['admin','profesor','sekretar'].includes(ROLE);
+  const isAdmin = ROLE === 'admin';
+  document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
+  document.querySelectorAll('.konfig-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
+  if (!canWrite) {
+    ['btn-add-mung','btn-bulk-mung','btn-add-rez','btn-bulk-rez','btn-add-st','btn-imp-st'].forEach(id => {
+      const el = ge(id); if(el) el.style.display = 'none';
+    });
+  }
+
+  // Profile page
+  ge('profile-av').textContent = initials;
+  ge('profile-name').textContent = name;
+  ge('profile-email').textContent = ME.email;
+  ge('profile-role').textContent = roleLabel[ROLE];
+  ge('profile-role').className = 'nav-badge ' + (roleCls[ROLE]||'');
+  ge('prof-emri').value = ME.emri || '';
+  ge('prof-mbiemri').value = ME.mbiemri || '';
+}
+
+// ── NAVIGATION ────────────────────────────────────────────
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  const pg = ge('page-'+id);
+  if (pg) pg.classList.add('active');
+  if (btn) btn.classList.add('active');
+  closeSidebar();
+  popSelects();
+  if (id==='dashboard') renderDash();
+  else if (id==='mungesa') renderMung();
+  else if (id==='rezultate') renderRez();
+  else if (id==='studentet') renderStudentet();
+  else if (id==='raportet') renderRaportet();
+  else if (id==='konfig') renderKonfig();
+  else if (id==='perdoruesit') renderUsers();
+}
+
+function toggleSidebar() {
+  const sb = ge('sidebar');
+  const ov = ge('sidebar-overlay');
+  sb.classList.toggle('open');
+  ov.classList.toggle('show');
+}
+function closeSidebar() {
+  ge('sidebar').classList.remove('open');
+  ge('sidebar-overlay').classList.remove('show');
+}
+
+// ── MODALS ────────────────────────────────────────────────
+function openMo(id) {
+  popSelects();
+  ge(id).classList.add('open');
+  if (id==='mo-mung' || id==='mo-bulk-mung') {
+    const dm = ge('i-mdata'); if(dm) dm.value = today();
+    const bmd = ge('bm-data'); if(bmd) bmd.value = today();
+  }
+}
+function closeMo(id) { ge(id).classList.remove('open'); }
+
+// ── POPULATE SELECTS ──────────────────────────────────────
+function popSelects() {
+  const opSt = cache.studentet.map(s=>`<option value="${s.id}">${s.emri} ${s.mbiemri} (${s.grupi||''})</option>`).join('');
+  const ops = {
+    lendet: CFG.lendet, grupet: CFG.grupet,
+    vitet_st: CFG.vitet_st, vitet_akad: CFG.vitet_akad,
+    sesionet: CFG.sesionet, nivelet: CFG.nivelet,
+    programet: CFG.programet, fakultetet: CFG.fakultetet
+  };
+  const mk = (arr, all) => (all ? `<option value="">${all}</option>` : '') + arr.map(v=>`<option>${v}</option>`).join('');
+
+  // filters
+  Q('fm-grup', mk(CFG.grupet,'Të gjitha grupet'));
+  Q('fm-lende', mk(CFG.lendet,'Të gjitha lëndët'));
+  Q('fm-vit', mk(CFG.vitet_akad,'Të gjitha vitet'));
+  Q('fr-ses', mk(CFG.sesionet,'Të gjitha sesioneт'));
+  Q('fr-lende', mk(CFG.lendet,'Të gjitha lëndët'));
+  Q('fr-grup', mk(CFG.grupet,'Të gjitha grupet'));
+  Q('fs-grup', mk(CFG.grupet,'Të gjitha grupet'));
+  Q('fs-nivel', mk(CFG.nivelet,'Të gjitha nivelet'));
+  Q('fs-fak', mk(CFG.fakultetet,'Të gjitha fakultetet'));
+  Q('d-vit', mk(CFG.vitet_akad,''));
+
+  // student modal
+  Q('i-mst', '<option value="">-- Zgjidh --</option>'+opSt);
+  Q('i-rst', '<option value="">-- Zgjidh --</option>'+opSt);
+  Q('i-mlende', mk(CFG.lendet,'-- Zgjidh --'));
+  Q('i-rlende', mk(CFG.lendet,'-- Zgjidh --'));
+  Q('i-mvit', mk(CFG.vitet_akad,''));
+  Q('i-rses', mk(CFG.sesionet,''));
+  Q('i-sgrupi', mk(CFG.grupet,''));
+  Q('i-sviti', mk(CFG.vitet_st,''));
+  Q('i-svregj', mk(CFG.vitet_akad,''));
+  Q('i-sniv', mk(CFG.nivelet,''));
+  Q('i-sprog', mk(CFG.programet,''));
+  Q('i-sfak', mk(CFG.fakultetet,''));
+
+  // bulk
+  Q('bm-grup', '<option value="">-- Zgjidh --</option>'+mk(CFG.grupet,''));
+  Q('bm-lende', mk(CFG.lendet,''));
+  Q('bm-vit', mk(CFG.vitet_akad,''));
+  Q('br-grup', '<option value="">-- Zgjidh --</option>'+mk(CFG.grupet,''));
+  Q('br-lende', mk(CFG.lendet,''));
+  Q('br-ses', mk(CFG.sesionet,''));
+
+  // pdf
+  Q('pdf-mg', mk(CFG.grupet,'Të gjitha'));
+  Q('pdf-ml', mk(CFG.lendet,'Të gjitha'));
+  Q('pdf-mv', mk(CFG.vitet_akad,'Të gjitha'));
+  Q('pdf-rg', mk(CFG.grupet,'Të gjitha'));
+  Q('pdf-rl', mk(CFG.lendet,'Të gjitha'));
+  Q('pdf-rs', mk(CFG.sesionet,'Të gjitha'));
+
+  // raporte
+  Q('sel-st-rap', '<option value="">-- Zgjidh studentin --</option>'+opSt);
+
+  // import st defaults
+  Q('imp-st-gdef', mk(CFG.grupet,''));
+  Q('imp-st-vdef', mk(CFG.vitet_st,''));
+}
+function Q(id, html) { const el=ge(id); if(el) el.innerHTML=html; }
+
+// ═══════════════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════════════
+function renderDash() {
+  const tot = cache.mungesa.reduce((a,b)=>a+b.ore,0);
+  const totJ = cache.mungesa.filter(m=>m.tipi==='J').reduce((a,b)=>a+b.ore,0);
+  const avg = cache.rezultate.length ? (cache.rezultate.reduce((a,b)=>a+b.nota,0)/cache.rezultate.length).toFixed(1) : '—';
+  const kal = cache.rezultate.length ? Math.round(cache.rezultate.filter(r=>r.nota>=5).length/cache.rezultate.length*100) : 0;
+  const risk = cache.studentet.filter(s=>totM(s.id)>20||(avgN(s.id)!==null&&avgN(s.id)<5)).length;
+  ge('d-metrics').innerHTML = `
+    <div class="metric"><div class="lbl">Studentë</div><div class="val">${cache.studentet.length}</div></div>
+    <div class="metric"><div class="lbl">Orë mungesa</div><div class="val" style="color:var(--red)">${tot}</div></div>
+    <div class="metric"><div class="lbl">Të justifikuara</div><div class="val" style="color:var(--teal)">${totJ}</div></div>
+    <div class="metric"><div class="lbl">Nota mesatare</div><div class="val" style="color:var(--blue)">${avg}</div></div>
+    <div class="metric"><div class="lbl">% Kalueshmëri</div><div class="val" style="color:var(--teal)">${kal}%</div></div>
+    <div class="metric"><div class="lbl">Studentë në rrezik</div><div class="val" style="color:${risk>0?'var(--red)':'var(--teal)'}">${risk}</div></div>`;
+  // chart muaj
+  const mJ=Array(12).fill(0), mP=Array(12).fill(0);
+  cache.mungesa.forEach(m=>{const mo=new Date(m.data).getMonth();(m.tipi==='J'?mJ:mP)[mo]+=m.ore});
+  dc('c-muaj');
+  charts['c-muaj'] = new Chart(ge('c-muaj'),{type:'bar',data:{labels:['Jan','Shk','Mar','Pri','Maj','Qer','Kor','Gus','Sht','Tet','Nën','Dhj'],datasets:[{label:'J',data:mJ,backgroundColor:'#2d7fd355',borderColor:'#2d7fd3',borderWidth:1.5},{label:'P',data:mP,backgroundColor:'#d9414055',borderColor:'#d94140',borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,beginAtZero:true}}}});
+  // chart lëndë
+  const lM={};cache.rezultate.forEach(r=>{if(!lM[r.lende])lM[r.lende]={s:0,n:0};lM[r.lende].s+=r.nota;lM[r.lende].n++});
+  const lL=Object.keys(lM),lD=lL.map(l=>(lM[l].s/lM[l].n).toFixed(1));
+  dc('c-lendet');
+  charts['c-lendet'] = new Chart(ge('c-lendet'),{type:'bar',data:{labels:lL,datasets:[{data:lD,backgroundColor:lD.map(d=>d>=7?'#17946855':d>=5?'#2d7fd355':'#d9414055'),borderColor:lD.map(d=>d>=7?'#179468':d>=5?'#2d7fd3':'#d94140'),borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{min:0,max:10}}}});
+  // top mungesa
+  const top=[...cache.studentet].sort((a,b)=>totM(b.id)-totM(a.id)).slice(0,5);
+  ge('d-topmung').innerHTML=top.map(s=>{const tm=totM(s.id);return`<tr><td><div class="st-row"><div class="av av-sm" style="background:var(--blue-l);color:var(--blue-d)">${inits(s)}</div>${s.emri} ${s.mbiemri}</div></td><td><span class="badge b-blue">${s.grupi||'—'}</span></td><td><b style="color:${tm>15?'var(--red)':'inherit'}">${tm}</b></td><td><span class="badge ${tm>20?'b-red':tm>10?'b-amber':'b-green'}">${tm>20?'Shumë':'OK'}</span></td></tr>`}).join('');
+  // nota dist
+  const nd=Array(10).fill(0);cache.rezultate.forEach(r=>{if(r.nota>=1&&r.nota<=10)nd[r.nota-1]++});
+  dc('c-notadist');
+  charts['c-notadist'] = new Chart(ge('c-notadist'),{type:'bar',data:{labels:['1','2','3','4','5','6','7','8','9','10'],datasets:[{data:nd,backgroundColor:nd.map((_,i)=>i<4?'#d9414088':i<5?'#b06e1288':'#17946888'),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MUNGESA
+// ═══════════════════════════════════════════════════════════
+function renderMung() {
+  const gf=val('fm-grup'),lf=val('fm-lende'),tf=val('fm-tip'),vf=val('fm-vit');
+  const qf=(val('fm-q')||'').toLowerCase();
+  let data=[...cache.mungesa];
+  if(lf) data=data.filter(m=>m.lende===lf);
+  if(tf) data=data.filter(m=>m.tipi===tf);
+  if(vf) data=data.filter(m=>m.viti_akad===vf);
+  if(gf){const sids=cache.studentet.filter(s=>s.grupi===gf).map(s=>s.id);data=data.filter(m=>sids.includes(m.sid))}
+  if(qf) data=data.filter(m=>stNm(m.sid).toLowerCase().includes(qf));
+  ge('mung-loading').style.display='none';
+  ge('mung-empty').style.display=data.length?'none':'block';
+  const canEdit=['admin','profesor'].includes(ROLE);
+  ge('tbl-mung').innerHTML=data.map(m=>{
+    const s=stOb(m.sid)||{};
+    return`<tr id="mr-${m.id}">
+      <td>${m.data}</td>
+      <td><div class="st-row"><div class="av av-sm" style="background:var(--blue-l);color:var(--blue-d);font-size:10px">${inits(s)}</div>${stNm(m.sid)}</div></td>
+      <td class="hide-mobile"><span class="badge b-blue">${s.grupi||'—'}</span></td>
+      <td>${m.lende}</td>
+      <td><span class="editable" onclick="${canEdit?`inlineOre(${m.id},this)`:'void 0'}" title="${canEdit?'Kliko për të edituar':''}"><b>${m.ore}</b></span></td>
+      <td class="hide-mobile"><span class="badge ${m.tipi==='J'?'b-green':'b-red'}" style="font-size:10px">${m.tipi==='J'?'J':'P'}</span></td>
+      <td class="hide-mobile" style="color:var(--text3)">${m.arsyeja||'—'}</td>
+      <td>${canEdit?`<button class="btn btn-sm btn-icon" onclick="editMung(${m.id})">✏</button> <button class="btn btn-sm btn-icon btn-red" onclick="delMung(${m.id})">✕</button>`:''}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function saveMung() {
+  const id = val('i-mid');
+  const payload = {
+    sid: val('i-mst') || null,
+    lende: val('i-mlende'),
+    data: val('i-mdata') || today(),
+    ore: parseInt(val('i-more'))||2,
+    tipi: val('i-mtipi'),
+    arsyeja: val('i-marsye'),
+    viti_akad: val('i-mvit'),
+    created_by: ME.id
+  };
+  if (!payload.sid) { toast('Zgjidh studentin!'); return; }
+  let err;
+  if (id) {
+    const { error } = await db.from('mungesa').update(payload).eq('id', parseInt(id));
+    err = error;
+  } else {
+    const { error } = await db.from('mungesa').insert(payload);
+    err = error;
+  }
+  if (err) { toast('Gabim: '+err.message, 4000); return; }
+  await loadMungesa();
+  closeMo('mo-mung');
+  renderMung(); renderDash();
+  toast(id ? '✓ Mungesa u përditësua' : '✓ Mungesa u regjistrua');
+}
+
+function editMung(id) {
+  const m = cache.mungesa.find(x=>x.id===id); if(!m) return;
+  popSelects();
+  ge('i-mid').value = id;
+  ge('mo-mung-title').textContent = 'Edito Mungesën';
+  ge('i-mst').value = m.sid;
+  ge('i-mlende').value = m.lende;
+  ge('i-mdata').value = m.data;
+  ge('i-more').value = m.ore;
+  ge('i-mtipi').value = m.tipi;
+  ge('i-marsye').value = m.arsyeja||'';
+  ge('i-mvit').value = m.viti_akad||'';
+  openMo('mo-mung');
+}
+
+async function delMung(id) {
+  if (!confirm('Fshi këtë mungesë?')) return;
+  const { error } = await db.from('mungesa').delete().eq('id', id);
+  if (error) { toast('Gabim: '+error.message, 4000); return; }
+  await loadMungesa();
+  renderMung(); renderDash();
+  toast('✓ Mungesa u fshi');
+}
+
+async function inlineOre(id, el) {
+  const m = cache.mungesa.find(x=>x.id===id); if(!m) return;
+  const old = el.innerHTML;
+  const inp = document.createElement('input');
+  inp.type='number'; inp.min=1; inp.max=8; inp.value=m.ore;
+  inp.className='inline-inp'; inp.style.width='55px';
+  el.innerHTML=''; el.appendChild(inp); inp.focus(); inp.select();
+  const save = async () => {
+    const v = Math.min(8, Math.max(1, parseInt(inp.value)||m.ore));
+    const { error } = await db.from('mungesa').update({ore:v}).eq('id', id);
+    if (error) { el.innerHTML=old; toast('Gabim!', 3000); return; }
+    m.ore = v;
+    renderMung(); toast(`✓ Orët → ${v}`);
+  };
+  inp.addEventListener('blur', save);
+  inp.addEventListener('keydown', e=>{if(e.key==='Enter') inp.blur(); if(e.key==='Escape') el.innerHTML=old;});
+}
+
+// BULK MUNGESA
+function loadBulkSt() {
+  const g = val('bm-grup');
+  const sts = g ? cache.studentet.filter(s=>s.grupi===g) : [];
+  ge('bulk-empty').style.display = sts.length ? 'none' : 'block';
+  ge('bulk-mung-body').innerHTML = sts.map(s=>`
+    <tr>
+      <td><input type="checkbox" class="bm-chk" data-sid="${s.id}" checked></td>
+      <td><div class="st-row"><div class="av av-sm" style="background:var(--blue-l);color:var(--blue-d);font-size:10px">${inits(s)}</div>${s.emri} ${s.mbiemri}</div></td>
+      <td><input type="number" class="bm-ore" data-sid="${s.id}" value="2" min="1" max="8"></td>
+      <td><select class="bm-tip" data-sid="${s.id}"><option value="P">P</option><option value="J">J</option></select></td>
+      <td><input type="text" class="bm-ars" data-sid="${s.id}" placeholder="Arsyeja..." style="width:120px"></td>
+    </tr>`).join('');
+}
+
+async function saveBulkMung() {
+  const lende=val('bm-lende'), data=val('bm-data'), viti_akad=val('bm-vit');
+  if (!data) { toast('Zgjidh datën!'); return; }
+  const checked = [...document.querySelectorAll('.bm-chk:checked')];
+  if (!checked.length) { toast('Asnjë student i zgjedhur!'); return; }
+  const rows = checked.map(chk => ({
+    sid: chk.dataset.sid, lende, data,
+    ore: parseInt(document.querySelector(`.bm-ore[data-sid="${chk.dataset.sid}"]`).value)||2,
+    tipi: document.querySelector(`.bm-tip[data-sid="${chk.dataset.sid}"]`).value,
+    arsyeja: document.querySelector(`.bm-ars[data-sid="${chk.dataset.sid}"]`).value,
+    viti_akad, created_by: ME.id
+  }));
+  const { error } = await db.from('mungesa').insert(rows);
+  if (error) { toast('Gabim: '+error.message, 4000); return; }
+  await loadMungesa();
+  closeMo('mo-bulk-mung');
+  renderMung(); renderDash();
+  toast(`✓ U regjistruan ${rows.length} mungesa`);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  REZULTATE
+// ═══════════════════════════════════════════════════════════
+function renderRez() {
+  const sf=val('fr-ses'),lf=val('fr-lende'),gf=val('fr-grup'),kf=val('fr-kaloi');
+  const qf=(val('fr-q')||'').toLowerCase();
+  let data=[...cache.rezultate];
+  if(sf) data=data.filter(r=>r.sesioni===sf);
+  if(lf) data=data.filter(r=>r.lende===lf);
+  if(gf){const sids=cache.studentet.filter(s=>s.grupi===gf).map(s=>s.id);data=data.filter(r=>sids.includes(r.sid))}
+  if(kf==='1') data=data.filter(r=>r.nota>=5);
+  else if(kf==='0') data=data.filter(r=>r.nota<5);
+  if(qf) data=data.filter(r=>stNm(r.sid).toLowerCase().includes(qf));
+  ge('rez-loading').style.display='none';
+  const canEdit=['admin','profesor'].includes(ROLE);
+  ge('tbl-rez').innerHTML=data.map(r=>{
+    const s=stOb(r.sid)||{};
+    return`<tr id="rr-${r.id}">
+      <td><div class="st-row"><div class="av av-sm" style="background:var(--blue-l);color:var(--blue-d);font-size:10px">${inits(s)}</div>${stNm(r.sid)}</div></td>
+      <td class="hide-mobile"><span class="badge b-blue">${s.grupi||'—'}</span></td>
+      <td>${r.lende}</td>
+      <td class="hide-mobile"><span class="badge b-purple" style="font-size:10px">${r.sesioni}</span></td>
+      <td><span class="editable" onclick="${canEdit?`inlineNota(${r.id},this)`:'void 0'}" title="${canEdit?'Kliko për të edituar':''}"><b style="color:${nc(r.nota)}">${r.nota}</b><span style="color:var(--text3)">/10</span></span></td>
+      <td class="hide-mobile"><span class="badge ${r.nota>=5?'b-green':'b-red'}">${r.nota>=5?'✓':'✗'}</span></td>
+      <td>${canEdit?`<button class="btn btn-sm btn-icon" onclick="editRez(${r.id})">✏</button> <button class="btn btn-sm btn-icon btn-red" onclick="delRez(${r.id})">✕</button>`:''}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function saveRez() {
+  const rid = val('i-rid');
+  const payload = {
+    sid: val('i-rst'),
+    lende: val('i-rlende'),
+    sesioni: val('i-rses'),
+    nota: Math.min(10,Math.max(1,parseInt(val('i-rnota'))||5)),
+    created_by: ME.id
+  };
+  if (!payload.sid) { toast('Zgjidh studentin!'); return; }
+  let err;
+  if (rid) {
+    const { error } = await db.from('rezultate').update(payload).eq('id', parseInt(rid));
+    err = error;
+  } else {
+    const { error } = await db.from('rezultate').upsert(payload, {onConflict:'sid,lende,sesioni'});
+    err = error;
+  }
+  if (err) { toast('Gabim: '+err.message, 4000); return; }
+  await loadRezultate();
+  closeMo('mo-rez');
+  renderRez(); renderDash();
+  toast(rid ? '✓ Rezultati u përditësua' : '✓ Rezultati u regjistrua');
+}
+
+function editRez(id) {
+  const r = cache.rezultate.find(x=>x.id===id); if(!r) return;
+  popSelects();
+  ge('i-rid').value = id;
+  ge('mo-rez-title').textContent = 'Edito Rezultatin';
+  ge('i-rst').value = r.sid;
+  ge('i-rlende').value = r.lende;
+  ge('i-rses').value = r.sesioni;
+  ge('i-rnota').value = r.nota;
+  openMo('mo-rez');
+}
+
+async function delRez(id) {
+  if (!confirm('Fshi këtë rezultat?')) return;
+  const { error } = await db.from('rezultate').delete().eq('id', id);
+  if (error) { toast('Gabim: '+error.message, 4000); return; }
+  await loadRezultate();
+  renderRez(); renderDash();
+  toast('✓ Rezultati u fshi');
+}
+
+async function inlineNota(id, el) {
+  const r = cache.rezultate.find(x=>x.id===id); if(!r) return;
+  const old = el.innerHTML;
+  const inp = document.createElement('input');
+  inp.type='number'; inp.min=1; inp.max=10; inp.value=r.nota;
+  inp.className='inline-inp'; inp.style.width='55px';
+  el.innerHTML=''; el.appendChild(inp); inp.focus(); inp.select();
+  const save = async () => {
+    const v = Math.min(10, Math.max(1, parseInt(inp.value)||r.nota));
+    const { error } = await db.from('rezultate').update({nota:v}).eq('id', id);
+    if (error) { el.innerHTML=old; toast('Gabim!', 3000); return; }
+    r.nota = v;
+    renderRez(); toast(`✓ Nota → ${v}`);
+  };
+  inp.addEventListener('blur', save);
+  inp.addEventListener('keydown', e=>{if(e.key==='Enter') inp.blur(); if(e.key==='Escape') el.innerHTML=old;});
+}
+
+// BULK REZULTATE
+function loadBulkRezSt() {
+  const g=val('br-grup'), ses=val('br-ses'), lende=val('br-lende');
+  const sts = g ? cache.studentet.filter(s=>s.grupi===g) : [];
+  ge('bulk-rez-empty').style.display = sts.length?'none':'block';
+  ge('bulk-rez-body').innerHTML = sts.map(s=>{
+    const ex = cache.rezultate.find(r=>r.sid===s.id&&r.lende===lende&&r.sesioni===ses);
+    return`<tr>
+      <td><div class="st-row"><div class="av av-sm" style="background:var(--blue-l);color:var(--blue-d);font-size:10px">${inits(s)}</div>${s.emri} ${s.mbiemri}</div></td>
+      <td><input type="number" class="br-nota" data-sid="${s.id}" value="${ex?ex.nota:''}" min="1" max="10" placeholder="1-10" style="width:65px"></td>
+      <td>${ex?`<span class="badge ${ex.nota>=5?'b-green':'b-red'}">${ex.nota}</span>`:'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function saveBulkRez() {
+  const lende=val('br-lende'), sesioni=val('br-ses');
+  const rows=[];
+  document.querySelectorAll('.br-nota').forEach(inp=>{
+    const nota=parseInt(inp.value);
+    if(!nota||nota<1||nota>10) return;
+    rows.push({sid:inp.dataset.sid, lende, sesioni, nota, created_by:ME.id});
+  });
+  if (!rows.length) { toast('Asnjë notë e plotësuar!'); return; }
+  const { error } = await db.from('rezultate').upsert(rows, {onConflict:'sid,lende,sesioni'});
+  if (error) { toast('Gabim: '+error.message, 4000); return; }
+  await loadRezultate();
+  closeMo('mo-bulk-rez');
+  renderRez(); renderDash();
+  toast(`✓ U regjistruan ${rows.length} nota`);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  STUDENTET
+// ═══════════════════════════════════════════════════════════
+function renderStudentet() {
+  const qf=(val('fs-q')||'').toLowerCase(), gf=val('fs-grup'), nf=val('fs-nivel'), fkf=val('fs-fak'), sf=val('fs-stat');
+  let data=[...cache.studentet];
+  if(qf) data=data.filter(s=>(s.emri+' '+s.mbiemri+(s.id||'')).toLowerCase().includes(qf));
+  if(gf) data=data.filter(s=>s.grupi===gf);
+  if(nf) data=data.filter(s=>s.niveli===nf);
+  if(fkf) data=data.filter(s=>s.fakulteti===fkf);
+  if(sf==='ok') data=data.filter(s=>totM(s.id)<=20&&(avgN(s.id)===null||avgN(s.id)>=5));
+  else if(sf==='risk') data=data.filter(s=>totM(s.id)>20||(avgN(s.id)!==null&&avgN(s.id)<5));
+  ge('st-loading').style.display='none';
+  const canEdit=['admin','sekretar'].includes(ROLE);
+  const nBadge=n=>n==='Bachelor'?'b-blue':n==='Master Shkencor'?'b-purple':'b-teal';
+  ge('tbl-st').innerHTML=data.map(s=>{
+    const tm=totM(s.id), mes=avgN(s.id), risk=tm>20||(mes!==null&&mes<5);
+    return`<tr>
+      <td><div class="st-row"><div class="av av-sm" style="background:var(--blue-l);color:var(--blue-d);font-size:10px">${inits(s)}</div><div><b>${s.emri} ${s.mbiemri}</b></div></div></td>
+      <td class="hide-mobile" style="font-size:12px;color:var(--text2)">${s.fakulteti||'—'} ${s.programi?'· '+s.programi:''}</td>
+      <td class="hide-mobile"><span class="badge ${nBadge(s.niveli)}" style="font-size:10px">${s.niveli||'—'}</span></td>
+      <td><span class="badge b-blue">${s.grupi||'—'}</span></td>
+      <td class="hide-mobile"><span class="badge b-coral" style="font-size:10px">${s.viti||'—'}</span></td>
+      <td style="color:${tm>20?'var(--red)':'inherit'}">${tm}</td>
+      <td class="hide-mobile"><b style="color:${mes&&mes>=7?'var(--teal)':mes&&mes>=5?'var(--blue)':'var(--red)'}">${mes?mes.toFixed(1):'—'}</b></td>
+      <td>${canEdit?`<button class="btn btn-sm btn-icon" onclick="editSt('${s.id}')">✏</button> <button class="btn btn-sm btn-icon btn-red" onclick="delSt('${s.id}')">✕</button>`:''}</td>
+    </tr>`;
+  }).join('');
+}
+
+function editSt(id) {
+  const s=cache.studentet.find(x=>x.id===id); if(!s) return;
+  popSelects();
+  ge('mo-st-title').textContent='Edito Studentin';
+  ge('i-stid').value=id;
+  ge('i-semri').value=s.emri;
+  ge('i-smbiemri').value=s.mbiemri;
+  ge('i-sfak').value=s.fakulteti||'';
+  ge('i-sprog').value=s.programi||'';
+  ge('i-sniv').value=s.niveli||'';
+  ge('i-sgrupi').value=s.grupi||'';
+  ge('i-sviti').value=s.viti||'';
+  ge('i-svregj').value=s.viti_regj||'';
+  openMo('mo-student');
+}
+
+async function saveSt() {
+  const id=ge('i-stid').value;
+  const emri=ge('i-semri').value.trim(), mbiemri=ge('i-smbiemri').value.trim();
+  if(!emri||!mbiemri) { toast('Plotëso emrin dhe mbiemrin!'); return; }
+  const payload={emri,mbiemri,grupi:val('i-sgrupi'),viti:val('i-sviti'),viti_regj:val('i-svregj'),niveli:val('i-sniv'),programi:val('i-sprog'),fakulteti:val('i-sfak'),created_by:ME.id};
+  let err;
+  if(id){const{error}=await db.from('studentet').update(payload).eq('id',id);err=error;}
+  else{const{error}=await db.from('studentet').insert(payload);err=error;}
+  if(err){toast('Gabim: '+err.message,4000);return;}
+  await loadStudentet();
+  closeMo('mo-student');
+  renderStudentet();
+  popSelects();
+  toast(id?'✓ Studenti u përditësua':'✓ Studenti u shtua');
+}
+
+async function delSt(id) {
+  if(!confirm('Fshi studentin dhe të gjitha të dhënat e tij?')) return;
+  const{error}=await db.from('studentet').update({aktiv:false}).eq('id',id);
+  if(error){toast('Gabim: '+error.message,4000);return;}
+  await Promise.all([loadStudentet(),loadMungesa(),loadRezultate()]);
+  renderStudentet(); renderDash();
+  toast('✓ Studenti u fshi');
+}
+
+// ── IMPORT ───────────────────────────────────────────────
+let impType = 'studentet';
+let pendingImp = null;
+
+function setImpType(type, btn) {
+  impType = type;
+  document.querySelectorAll('#imp-tabs .tab').forEach(t=>t.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  cancelImport();
+  const hints={
+    studentet:'emri | mbiemri | grupi | viti | viti_regjistrimit',
+    mungesa:'emri | mbiemri | grupi | viti | lenda | data | ore | tipi (J/P) | arsyeja',
+    rezultate:'emri | mbiemri | grupi | lenda | sesioni | nota'
+  };
+  ge('imp-format-hint').innerHTML=`<b>Format:</b> <code>${hints[type]}</code>`;
+}
+
+function handleFile(inp) {
+  const f=inp.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+    if(!rows.length) return;
+    pendingImp=rows;
+    showImpPrev(rows);
+  };r.readAsArrayBuffer(f);
+}
+
+function showImpPrev(rows) {
+  ge('imp-preview').style.display='block';
+  const hd=rows[0], body=rows.slice(1,6);
+  ge('imp-alert').innerHTML=`Skedar me <b>${rows.length-1} rreshta</b> — Tipi: <b>${impType}</b>`;
+  ge('prev-title').textContent=`Parapamja (${Math.min(5,rows.length-1)} rreshta)`;
+  ge('prev-head').innerHTML='<tr>'+hd.map(h=>`<th>${h}</th>`).join('')+'</tr>';
+  ge('prev-body').innerHTML=body.map(r=>'<tr>'+hd.map((_,i)=>`<td>${r[i]||''}</td>`).join('')+'</tr>').join('');
+}
+
+async function confirmImport() {
+  if(!pendingImp) return;
+  let cnt=0;
+  const rows=pendingImp.slice(1).filter(r=>r.some(c=>(c||'').toString().trim()));
+  if(impType==='mungesa'){
+    const inserts=[];
+    for(const r of rows){
+      const emri=(r[0]||'').toString().trim(), mbiemri=(r[1]||'').toString().trim();
+      const s=cache.studentet.find(st=>st.emri.toLowerCase()===emri.toLowerCase()&&st.mbiemri.toLowerCase()===mbiemri.toLowerCase());
+      if(!s) continue;
+      inserts.push({sid:s.id,lende:r[4]||'',data:r[5]||today(),ore:parseInt(r[6])||2,tipi:(r[7]||'P').toString().toUpperCase(),arsyeja:r[8]||'',viti_akad:r[3]||'',created_by:ME.id});
+      cnt++;
+    }
+    if(inserts.length){const{error}=await db.from('mungesa').insert(inserts);if(error){toast('Gabim: '+error.message,4000);return;}}
+    await loadMungesa();
+  } else if(impType==='rezultate'){
+    const inserts=[];
+    for(const r of rows){
+      const emri=(r[0]||'').toString().trim(), mbiemri=(r[1]||'').toString().trim();
+      const s=cache.studentet.find(st=>st.emri.toLowerCase()===emri.toLowerCase()&&st.mbiemri.toLowerCase()===mbiemri.toLowerCase());
+      if(!s) continue;
+      inserts.push({sid:s.id,lende:r[3]||'',sesioni:r[4]||'',nota:parseInt(r[5])||5,created_by:ME.id});
+      cnt++;
+    }
+    if(inserts.length){const{error}=await db.from('rezultate').upsert(inserts,{onConflict:'sid,lende,sesioni'});if(error){toast('Gabim: '+error.message,4000);return;}}
+    await loadRezultate();
+  } else {
+    // studentet
+    const inserts=[];
+    for(const r of rows){
+      let emri='',mbiemri='';
+      const c0=(r[0]||'').toString().trim(), c1=(r[1]||'').toString().trim();
+      const isTwoCol=c1&&/^[A-Za-zÀ-öø-ÿ '-]+$/.test(c1)&&!CFG.grupet.includes(c1);
+      if(isTwoCol){emri=c0;mbiemri=c1;}else{const p=c0.split(/\s+/);emri=p[0]||'';mbiemri=p.slice(1).join(' ');}
+      if(!emri) continue;
+      inserts.push({emri,mbiemri,grupi:r[isTwoCol?2:1]||CFG.grupet[0],viti:r[isTwoCol?3:2]||CFG.vitet_st[0],viti_regj:r[isTwoCol?4:3]||'',created_by:ME.id});
+      cnt++;
+    }
+    if(inserts.length){const{error}=await db.from('studentet').insert(inserts);if(error){toast('Gabim: '+error.message,4000);return;}}
+    await loadStudentet();
+    popSelects();
+  }
+  toast(`✓ U importuan ${cnt} rekorde`);
+  cancelImport(); renderDash();
+}
+
+function cancelImport(){pendingImp=null;ge('imp-preview').style.display='none';ge('file-inp').value='';}
+
+function dlTpl(){
+  const d={
+    studentet:[['emri','mbiemri','grupi','viti','viti_regjistrimit'],['Arta','Hoxha','G1-A','Viti I','2024-2025']],
+    mungesa:[['emri','mbiemri','grupi','viti_akad','lenda','data','ore','tipi','arsyeja'],['Arta','Hoxha','G1-A','2024-2025','Matematikë','2025-03-10',2,'J','Sëmundje']],
+    rezultate:[['emri','mbiemri','grupi','lenda','sesioni','nota'],['Arta','Hoxha','G1-A','Matematikë','Janar 2025',8]]
+  }[impType];
+  const ws=XLSX.utils.aoa_to_sheet(d),wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Sheet1');
+  XLSX.writeFile(wb,`shabllon_${impType}.xlsx`);
+}
+
+// IMPORT STUDENTET individual
+function handleStFile(inp){
+  const f=inp.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+    if(!rows.length) return;
+    const isHdr=rows[0].some(c=>/emri|name|first/i.test((c||'').toString()));
+    const data=isHdr?rows.slice(1):rows;
+    const parsed=[];
+    const dups=[];
+    for(const row of data){
+      const c0=(row[0]||'').toString().trim(),c1=(row[1]||'').toString().trim();
+      const isTwoCol=c1&&/^[A-Za-zÀ-öø-ÿ '-]+$/.test(c1)&&!CFG.grupet.includes(c1);
+      let emri='',mbiemri='';
+      if(isTwoCol){emri=c0;mbiemri=c1;}else{const p=c0.split(/\s+/);emri=p[0]||'';mbiemri=p.slice(1).join(' ');}
+      if(!emri) continue;
+      const isDup=cache.studentet.some(s=>s.emri.toLowerCase()===emri.toLowerCase()&&s.mbiemri.toLowerCase()===mbiemri.toLowerCase());
+      if(isDup) dups.push(`${emri} ${mbiemri}`);
+      parsed.push({emri,mbiemri,grupi:row[isTwoCol?2:1]||'__DEF__',viti:row[isTwoCol?3:2]||'__DEF__',isDup});
+    }
+    ge('imp-st-body').innerHTML=parsed.map((p,i)=>`
+      <tr style="${p.isDup?'opacity:.6':''}">
+        <td><input type="checkbox" class="ist-chk" data-idx="${i}" ${p.isDup?'':'checked'}></td>
+        <td><input type="text" class="ist-emri" data-idx="${i}" value="${p.emri}" style="width:100px"></td>
+        <td><input type="text" class="ist-mbiemri" data-idx="${i}" value="${p.mbiemri}" style="width:110px"></td>
+        <td><select class="ist-grup" data-idx="${i}" style="width:80px">${CFG.grupet.map(g=>`<option ${g===p.grupi?'selected':''}>${g}</option>`).join('')}</select></td>
+        <td><select class="ist-vit" data-idx="${i}" style="width:90px">${CFG.vitet_st.map(v=>`<option ${v===p.viti?'selected':''}>${v}</option>`).join('')}</select></td>
+        <td>${p.isDup?'<span class="badge b-amber">Ekziston</span>':'<span class="badge b-green">I ri</span>'}</td>
+      </tr>`).join('');
+    if(dups.length){ge('imp-st-dup').style.display='block';ge('imp-st-dup').textContent=`${dups.length} ekzistojnë tashmë dhe janë çmarkuar.`;}
+    ge('st-imp-preview').style.display='block';
+  };r.readAsArrayBuffer(f);
+}
+
+async function confirmStImp(){
+  const defG=val('imp-st-gdef'),defV=val('imp-st-vdef');
+  const rows=[];
+  document.querySelectorAll('.ist-chk:checked').forEach(chk=>{
+    const i=chk.dataset.idx;
+    const emri=(document.querySelector(`.ist-emri[data-idx="${i}"]`).value||'').trim();
+    const mbiemri=(document.querySelector(`.ist-mbiemri[data-idx="${i}"]`).value||'').trim();
+    if(!emri) return;
+    rows.push({emri,mbiemri,grupi:document.querySelector(`.ist-grup[data-idx="${i}"]`).value||defG,viti:document.querySelector(`.ist-vit[data-idx="${i}"]`).value||defV,created_by:ME.id});
+  });
+  if(!rows.length){toast('Asnjë student i zgjedhur!');return;}
+  const{error}=await db.from('studentet').insert(rows);
+  if(error){toast('Gabim: '+error.message,4000);return;}
+  await loadStudentet(); popSelects();
+  closeMo('mo-imp-st'); resetStImp();
+  renderStudentet(); renderDash();
+  toast(`✓ U shtuan ${rows.length} studentë`);
+}
+
+function resetStImp(){ge('st-imp-preview').style.display='none';ge('st-file-inp').value='';}
+
+// ═══════════════════════════════════════════════════════════
+//  RAPORTET
+// ═══════════════════════════════════════════════════════════
+function renderRaportet(){
+  const tot=cache.mungesa.reduce((a,b)=>a+b.ore,0);
+  const kal=cache.rezultate.length?Math.round(cache.rezultate.filter(r=>r.nota>=5).length/cache.rezultate.length*100):0;
+  const avg=cache.rezultate.length?(cache.rezultate.reduce((a,b)=>a+b.nota,0)/cache.rezultate.length).toFixed(1):'—';
+  const risk=cache.studentet.filter(s=>totM(s.id)>20||(avgN(s.id)!==null&&avgN(s.id)<5)).length;
+  ge('rp-metrics').innerHTML=`
+    <div class="metric"><div class="lbl">Studentë</div><div class="val">${cache.studentet.length}</div></div>
+    <div class="metric"><div class="lbl">Orë mungesa</div><div class="val" style="color:var(--red)">${tot}</div></div>
+    <div class="metric"><div class="lbl">% Kalueshmëri</div><div class="val" style="color:var(--teal)">${kal}%</div></div>
+    <div class="metric"><div class="lbl">Nota mesatare</div><div class="val" style="color:var(--blue)">${avg}</div></div>
+    <div class="metric"><div class="lbl">Studentë në rrezik</div><div class="val" style="color:${risk>0?'var(--red)':'var(--teal)'}">${risk}</div></div>`;
+  const gM={};CFG.grupet.forEach(g=>gM[g]=0);
+  cache.mungesa.forEach(m=>{const s=stOb(m.sid);if(s)gM[s.grupi]=(gM[s.grupi]||0)+m.ore});
+  dc('c-rpgrup');charts['c-rpgrup']=new Chart(ge('c-rpgrup'),{type:'doughnut',data:{labels:CFG.grupet,datasets:[{data:CFG.grupet.map(g=>gM[g]),backgroundColor:['#2d7fd3','#179468','#b06e12','#d94140','#6d68cc'],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right'}}}});
+  const sesK=CFG.sesionet.map(s=>{const r=cache.rezultate.filter(x=>x.sesioni===s);return r.length?Math.round(r.filter(x=>x.nota>=5).length/r.length*100):0});
+  dc('c-rpses');charts['c-rpses']=new Chart(ge('c-rpses'),{type:'bar',data:{labels:CFG.sesionet,datasets:[{data:sesK,backgroundColor:sesK.map(v=>v>=70?'#17946866':v>=50?'#2d7fd366':'#d9414066'),borderColor:sesK.map(v=>v>=70?'#179468':v>=50?'#2d7fd3':'#d94140'),borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}}});
+  ge('tbl-rpgrup').innerHTML=CFG.grupet.map(g=>{
+    const sts=cache.studentet.filter(s=>s.grupi===g);
+    const tm=cache.mungesa.filter(m=>sts.map(s=>s.id).includes(m.sid)).reduce((a,b)=>a+b.ore,0);
+    const rr=cache.rezultate.filter(r=>sts.map(s=>s.id).includes(r.sid));
+    const avg2=rr.length?(rr.reduce((a,b)=>a+b.nota,0)/rr.length).toFixed(1):'-';
+    const k2=rr.length?Math.round(rr.filter(r=>r.nota>=5).length/rr.length*100):0;
+    return`<tr><td><b>${g}</b></td><td>${sts.length}</td><td>${tm}</td><td>${avg2}</td><td>${k2}%</td><td><span class="badge ${k2>=60?'b-green':'b-red'}">${k2>=60?'Mirë':'Vëmendje'}</span></td></tr>`;
+  }).join('');
+  ge('tbl-rplende').innerHTML=CFG.lendet.map(l=>{
+    const tm=cache.mungesa.filter(m=>m.lende===l).reduce((a,b)=>a+b.ore,0);
+    const rr=cache.rezultate.filter(r=>r.lende===l);
+    const avg2=rr.length?(rr.reduce((a,b)=>a+b.nota,0)/rr.length).toFixed(1):'-';
+    const k2=rr.length?Math.round(rr.filter(r=>r.nota>=5).length/rr.length*100):0;
+    return`<tr><td><b>${l}</b></td><td>${tm}</td><td>${avg2}</td><td>${k2}%</td><td>${rr.length}</td></tr>`;
+  }).join('');
+  const rrezik=cache.studentet.filter(s=>totM(s.id)>20||(avgN(s.id)!==null&&avgN(s.id)<5));
+  ge('rp-rrezik').querySelector('tbody')||ge('tbl-rprrezik');
+  ge('tbl-rprrezik').innerHTML=rrezik.map(s=>{
+    const tm=totM(s.id),mes=avgN(s.id);
+    const sh=(tm>20&&mes!==null&&mes<5)?'Mungesa + Notë':(tm>20?'Mungesa të larta':'Notë e ulët');
+    return`<tr><td><b>${s.emri} ${s.mbiemri}</b></td><td>${s.grupi||'—'}</td><td><b style="color:var(--red)">${tm}h</b></td><td><b style="color:${mes&&mes>=5?'var(--teal)':'var(--red)'}">${mes?mes.toFixed(1):'—'}</b></td><td><span class="badge b-red">${sh}</span></td></tr>`;
+  }).join('');
+  popSelects();
+}
+
+function showRap(id,btn){
+  ['rp-perm','rp-grup','rp-lende','rp-stud','rp-rrezik','rp-pdf'].forEach(r=>{const el=ge(r);if(el)el.style.display='none'});
+  document.querySelectorAll('.tab-row .tab').forEach(t=>t.classList.remove('active'));
+  ge(id).style.display='block'; if(btn)btn.classList.add('active');
+}
+
+function renderStudKartela(){
+  const sid=val('sel-st-rap');const c=ge('stud-kartela');if(!sid){c.innerHTML='';return}
+  const s=cache.studentet.find(x=>x.id===sid);
+  const rr=cache.rezultate.filter(r=>r.sid===sid),mm=cache.mungesa.filter(m=>m.sid===sid);
+  const mes=avgN(sid),tm=totM(sid);const risk=tm>20||(mes!==null&&mes<5);
+  c.innerHTML=`
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:1.25rem">
+        <div class="av" style="width:52px;height:52px;font-size:16px;background:${risk?'var(--red-l)':'var(--teal-l)'};color:${risk?'var(--red-d)':'var(--teal-d)'}">${inits(s)}</div>
+        <div><div style="font-size:18px;font-weight:700">${s.emri} ${s.mbiemri}</div>
+        <div style="color:var(--text2);font-size:13px">${s.grupi||'—'} · ${s.viti||'—'} · ${s.fakulteti||''}</div>
+        <div style="font-size:12px;color:var(--text3)">${s.niveli||''} ${s.programi?'· '+s.programi:''}</div></div>
+      </div>
+      <div class="metrics" style="margin-bottom:0">
+        <div class="metric"><div class="lbl">Mungesa</div><div class="val" style="color:${tm>20?'var(--red)':'inherit'}">${tm}h</div></div>
+        <div class="metric"><div class="lbl">Nota mesatare</div><div class="val" style="color:${mes&&mes>=7?'var(--teal)':mes&&mes>=5?'var(--blue)':'var(--red)'}">${mes?mes.toFixed(1):'—'}</div></div>
+        <div class="metric"><div class="lbl">Provime</div><div class="val">${rr.length}</div></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="card-title">Mungesa (${mm.length})</div>
+        <div class="tbl-wrap"><table><thead><tr><th>Data</th><th>Lënda</th><th>Orë</th><th>Tipi</th></tr></thead>
+        <tbody>${mm.length?mm.map(m=>`<tr><td>${m.data}</td><td>${m.lende}</td><td>${m.ore}</td><td><span class="badge ${m.tipi==='J'?'b-green':'b-red'}" style="font-size:10px">${m.tipi}</span></td></tr>`).join(''):'<tr><td colspan="4" class="no-data">Nuk ka mungesa</td></tr>'}</tbody>
+        </table></div></div>
+      <div class="card"><div class="card-title">Rezultate (${rr.length})</div>
+        <div class="tbl-wrap"><table><thead><tr><th>Lënda</th><th>Sesioni</th><th>Nota</th></tr></thead>
+        <tbody>${rr.length?rr.map(r=>`<tr><td>${r.lende}</td><td><span class="badge b-purple" style="font-size:10px">${r.sesioni}</span></td><td><b style="color:${nc(r.nota)}">${r.nota}</b></td></tr>`).join(''):'<tr><td colspan="3" class="no-data">Nuk ka rezultate</td></tr>'}</tbody>
+        </table></div></div>
+    </div>`;
+}
+
+function exportData(type){
+  let rows;
+  if(type==='mungesa'){rows=[['Studenti','Grupi','Lënda','Data','Orë','Tipi','Arsyeja','Viti Akademik']];cache.mungesa.forEach(m=>{const s=stOb(m.sid)||{};rows.push([stNm(m.sid),s.grupi||'',m.lende,m.data,m.ore,m.tipi,m.arsyeja||'',m.viti_akad||'']);})}
+  else if(type==='rezultate'){rows=[['Studenti','Grupi','Lënda','Sesioni','Nota','Kaloi']];cache.rezultate.forEach(r=>{const s=stOb(r.sid)||{};rows.push([stNm(r.sid),s.grupi||'',r.lende,r.sesioni,r.nota,r.nota>=5?'Po':'Jo']);})}
+  else{rows=[['Emri','Mbiemri','Grupi','Viti','Viti Regj.','Niveli','Programi','Fakulteti','Mungesa','Mesatare']];cache.studentet.forEach(s=>rows.push([s.emri,s.mbiemri,s.grupi||'',s.viti||'',s.viti_regj||'',s.niveli||'',s.programi||'',s.fakulteti||'',totM(s.id),(avgN(s.id)||0).toFixed(1)]));}
+  const ws=XLSX.utils.aoa_to_sheet(rows),wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Sheet1');XLSX.writeFile(wb,`raport_${type}.xlsx`);
+}
+
+function printMungesa(){
+  const gf=val('pdf-mg'),lf=val('pdf-ml'),vf=val('pdf-mv'),d1=val('pdf-md1'),d2=val('pdf-md2');
+  let data=[...cache.mungesa];
+  if(gf){const sids=cache.studentet.filter(s=>s.grupi===gf).map(s=>s.id);data=data.filter(m=>sids.includes(m.sid));}
+  if(lf)data=data.filter(m=>m.lende===lf);
+  if(vf)data=data.filter(m=>m.viti_akad===vf);
+  if(d1)data=data.filter(m=>m.data>=d1);
+  if(d2)data=data.filter(m=>m.data<=d2);
+  data.sort((a,b)=>a.data.localeCompare(b.data));
+  const tot=data.reduce((a,b)=>a+b.ore,0);
+  ge('pdf-title').textContent=`Regjistër Mungesash${gf?' — '+gf:''}`;
+  ge('pdf-content').innerHTML=`
+    <div style="margin-bottom:1rem"><b>Total: ${data.length} rekorde · ${tot} orë mungesa</b></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>#</th><th>Studenti</th><th>Grupi</th><th>Lënda</th><th>Data</th><th>Orë</th><th>Tipi</th><th>Arsyeja</th></tr></thead>
+      <tbody>${data.map((m,i)=>{const s=stOb(m.sid)||{};return`<tr><td>${i+1}</td><td>${stNm(m.sid)}</td><td>${s.grupi||'—'}</td><td>${m.lende}</td><td>${m.data}</td><td><b>${m.ore}</b></td><td><span class="badge ${m.tipi==='J'?'b-green':'b-red'}" style="font-size:10px">${m.tipi}</span></td><td>${m.arsyeja||'—'}</td></tr>`}).join('')}</tbody>
+    </table></div>`;
+  ge('pdf-area').style.display='block';
+  ge('pdf-area').scrollIntoView({behavior:'smooth'});
+}
+
+function printRezultate(){
+  const gf=val('pdf-rg'),lf=val('pdf-rl'),sf=val('pdf-rs');
+  let data=[...cache.rezultate];
+  if(gf){const sids=cache.studentet.filter(s=>s.grupi===gf).map(s=>s.id);data=data.filter(r=>sids.includes(r.sid));}
+  if(lf)data=data.filter(r=>r.lende===lf);
+  if(sf)data=data.filter(r=>r.sesioni===sf);
+  const avg=data.length?(data.reduce((a,b)=>a+b.nota,0)/data.length).toFixed(1):'—';
+  ge('pdf-title').textContent=`Rezultate${gf?' — '+gf:''}${sf?' / '+sf:''}`;
+  ge('pdf-content').innerHTML=`
+    <div style="margin-bottom:1rem"><b>${data.length} rezultate · Nota mesatare: ${avg}</b></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>#</th><th>Studenti</th><th>Grupi</th><th>Lënda</th><th>Sesioni</th><th>Nota</th><th>Kaloi</th></tr></thead>
+      <tbody>${data.map((r,i)=>{const s=stOb(r.sid)||{};return`<tr><td>${i+1}</td><td>${stNm(r.sid)}</td><td>${s.grupi||'—'}</td><td>${r.lende}</td><td>${r.sesioni}</td><td><b style="color:${nc(r.nota)}">${r.nota}</b></td><td><span class="badge ${r.nota>=5?'b-green':'b-red'}">${r.nota>=5?'✓':'✗'}</span></td></tr>`}).join('')}</tbody>
+    </table></div>`;
+  ge('pdf-area').style.display='block';
+  ge('pdf-area').scrollIntoView({behavior:'smooth'});
+}
+
+// ═══════════════════════════════════════════════════════════
+//  KONFIGURIM
+// ═══════════════════════════════════════════════════════════
+async function renderKonfig(){
+  await loadConfig();
+  const cfgs=[
+    {id:'list-lendet',key:'lendet',tbl:'config_lendet'},
+    {id:'list-grupet',key:'grupet',tbl:'config_grupet'},
+    {id:'list-vst',key:'vitet_st',tbl:'config_vitet_st'},
+    {id:'list-vakad',key:'vitet_akad',tbl:'config_vitet_akad'},
+    {id:'list-ses',key:'sesionet',tbl:'config_sesionet'},
+    {id:'list-niv',key:'nivelet',tbl:'config_nivelet'},
+    {id:'list-prog',key:'programet',tbl:'config_programet'},
+    {id:'list-fak',key:'fakultetet',tbl:'config_fakultetet'},
+  ];
+  cfgs.forEach(({id,key})=>{
+    ge(id).innerHTML=(CFG[key]||[]).map(item=>`
+      <div class="settings-item">
+        <span>${item}</span>
+        <button class="btn btn-sm btn-red" onclick="delCfg('${id}','${key}','${item}')">✕</button>
+      </div>`).join('');
+  });
+}
+
+const cfgMap={lendet:'config_lendet',grupet:'config_grupet',vitet_st:'config_vitet_st',vitet_akad:'config_vitet_akad',sesionet:'config_sesionet',nivelet:'config_nivelet',programet:'config_programet',fakultetet:'config_fakultetet'};
+const cfgInpMap={lendet:'inp-lende-new',grupet:'inp-grup-new',vitet_st:'inp-vst-new',vitet_akad:'inp-vakad-new',sesionet:'inp-ses-new',nivelet:'inp-niv-new',programet:'inp-prog-new',fakultetet:'inp-fak-new'};
+
+async function addCfg(key){
+  const inpId=cfgInpMap[key];const v=ge(inpId).value.trim();
+  if(!v)return;
+  if(CFG[key].includes(v)){toast('Ekziston tashmë!');return;}
+  const{error}=await db.from(cfgMap[key]).insert({emri:v});
+  if(error){toast('Gabim: '+error.message,4000);return;}
+  ge(inpId).value='';
+  await renderKonfig();
+  toast('✓ U shtua: '+v);
+}
+
+async function delCfg(listId,key,item){
+  if(!confirm(`Fshi "${item}"?`)) return;
+  const{error}=await db.from(cfgMap[key]).delete().eq('emri',item);
+  if(error){toast('Gabim: '+error.message,4000);return;}
+  await renderKonfig();
+  toast('✓ U fshi: '+item);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PERDORUESIT (admin only)
+// ═══════════════════════════════════════════════════════════
+async function renderUsers(){
+  ge('users-loading').style.display='block';
+  const{data}=await db.from('profiles').select('*').order('email');
+  ge('users-loading').style.display='none';
+  const roles={admin:'Admin',profesor:'Profesor',sekretar:'Sekretar',lexues:'Lexues'};
+  const roleCls={admin:'role-admin',profesor:'role-profesor',sekretar:'role-sekretar',lexues:'role-lexues'};
+  ge('tbl-users').innerHTML=(data||[]).map(u=>`<tr>
+    <td>${u.email}</td>
+    <td>${u.emri||''} ${u.mbiemri||''}</td>
+    <td><select onchange="changeRole('${u.id}',this.value)" style="min-width:110px">
+      ${['admin','profesor','sekretar','lexues'].map(r=>`<option value="${r}" ${u.roli===r?'selected':''}>${roles[r]}</option>`).join('')}
+    </select></td>
+    <td><span class="badge ${u.aktiv?'b-green':'b-red'}">${u.aktiv?'Aktiv':'Joaktiv'}</span></td>
+    <td>${u.id!==ME.id?`<button class="btn btn-sm btn-red" onclick="deactivateUser('${u.id}')">Çaktivizo</button>`:''}</td>
+  </tr>`).join('');
+}
+
+async function changeRole(uid,role){
+  const{error}=await db.from('profiles').update({roli:role}).eq('id',uid);
+  if(error){toast('Gabim: '+error.message,4000);return;}
+  toast('✓ Roli u ndryshua');
+}
+
+async function deactivateUser(uid){
+  if(!confirm('Çaktivizo këtë përdorues?')) return;
+  const{error}=await db.from('profiles').update({aktiv:false}).eq('id',uid);
+  if(error){toast('Gabim: '+error.message,4000);return;}
+  renderUsers(); toast('✓ Përdoruesi u çaktivizua');
+}
+
+async function inviteUser(){
+  const email=ge('inv-email').value.trim(), role=val('inv-role');
+  const emri=ge('inv-emri').value.trim(), mbiemri=ge('inv-mbiemri').value.trim();
+  if(!email){toast('Plotëso email-in!');return;}
+  const{error}=await db.auth.admin.inviteUserByEmail(email,{data:{emri,mbiemri,roli:role}});
+  if(error){toast('Gabim: '+error.message,4000);return;}
+  closeMo('mo-invite'); toast('✓ Ftesa u dërgua te '+email);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PROFILI
+// ═══════════════════════════════════════════════════════════
+async function saveProfile(){
+  const emri=ge('prof-emri').value.trim(),mbiemri=ge('prof-mbiemri').value.trim();
+  const{error:e1}=await db.from('profiles').update({emri,mbiemri}).eq('id',ME.id);
+  if(e1){toast('Gabim: '+e1.message,4000);return;}
+  ME.emri=emri; ME.mbiemri=mbiemri;
+  const pass=ge('prof-pass').value;
+  if(pass){const{error:e2}=await db.auth.updateUser({password:pass});if(e2){toast('Gabim fjalëkalimi: '+e2.message,4000);return;}ge('prof-pass').value='';}
+  updateNavUI(); toast('✓ Profili u ruajt');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DRAG & DROP / KEYBOARD / INIT
+// ═══════════════════════════════════════════════════════════
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('login-email')===document.activeElement||e.key==='Enter'&&document.getElementById('login-pass')===document.activeElement) doLogin();});
+document.querySelectorAll('.mo').forEach(o=>o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open')}));
+setImpType('studentet');
+
+// Real-time subscriptions for multi-user sync
+function setupRealtime(){
+  db.channel('akademik')
+    .on('postgres_changes',{event:'*',schema:'public',table:'mungesa'},async()=>{await loadMungesa();renderMung();renderDash();})
+    .on('postgres_changes',{event:'*',schema:'public',table:'rezultate'},async()=>{await loadRezultate();renderRez();renderDash();})
+    .on('postgres_changes',{event:'*',schema:'public',table:'studentet'},async()=>{await loadStudentet();renderStudentet();popSelects();})
+    .subscribe();
+}
+
+// Start
+init().then(()=>{
+  if(db.auth.getSession) setupRealtime();
+});
+</script>
+</body>
+</html>
