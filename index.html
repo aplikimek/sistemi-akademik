@@ -112,7 +112,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sy
   .main-wrap{margin-left:0}
   .grid2,.grid3{grid-template-columns:1fr!important}
   .metrics{grid-template-columns:repeat(2,1fr)!important}
-  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-inviteUser(scrolling:touch}
   th,td{white-space:nowrap}
   .hide-mobile{display:none!important}
   .page{padding:1rem}
@@ -1723,11 +1723,21 @@ async function inviteUser(){
   const email=ge('inv-email').value.trim(), role=val('inv-role');
   const emri=ge('inv-emri').value.trim(), mbiemri=ge('inv-mbiemri').value.trim();
   if(!email){toast('Plotëso email-in!');return;}
-  const{error}=await db.auth.admin.inviteUserByEmail(email,{data:{emri,mbiemri,roli:role}});
+  const pass = prompt('Vendos fjalëkalim të përkohshëm për '+email+' (min 8 karaktere):');
+  if(!pass||pass.length<8){toast('Fjalëkalimi duhet të jetë min 8 karaktere!');return;}
+  const{data,error}=await db.auth.signUp({
+    email, password:pass,
+    options:{data:{emri,mbiemri,roli:role}}
+  });
   if(error){toast('Gabim: '+error.message,4000);return;}
-  closeMo('mo-invite'); toast('✓ Ftesa u dërgua te '+email);
+  if(data?.user){
+    await db.from('profiles').upsert({
+      id:data.user.id, email, emri, mbiemri, roli:role
+    });
+  }
+  closeMo('mo-invite');
+  toast('✓ Useri u krijua! Njofto: '+email+' me fjalëkalimin e vendosur.');
 }
-
 // ═══════════════════════════════════════════════════════════
 //  PROFILI
 // ═══════════════════════════════════════════════════════════
