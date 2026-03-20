@@ -1723,20 +1723,9 @@ async function inviteUser(){
   const email=ge('inv-email').value.trim(), role=val('inv-role');
   const emri=ge('inv-emri').value.trim(), mbiemri=ge('inv-mbiemri').value.trim();
   if(!email){toast('Plotëso email-in!');return;}
-  const pass = prompt('Vendos fjalëkalim të përkohshëm për '+email+' (min 8 karaktere):');
-  if(!pass||pass.length<8){toast('Fjalëkalimi duhet të jetë min 8 karaktere!');return;}
-  const{data,error}=await db.auth.signUp({
-    email, password:pass,
-    options:{data:{emri,mbiemri,roli:role}}
-  });
+  const{error}=await db.auth.admin.inviteUserByEmail(email,{data:{emri,mbiemri,roli:role}});
   if(error){toast('Gabim: '+error.message,4000);return;}
-  if(data?.user){
-    await db.from('profiles').upsert({
-      id:data.user.id, email, emri, mbiemri, roli:role
-    });
-  }
-  closeMo('mo-invite');
-  toast('✓ Useri u krijua! Njofto: '+email+' me fjalëkalimin e vendosur.');
+  closeMo('mo-invite'); toast('✓ Ftesa u dërgua te '+email);
 }
 // ═══════════════════════════════════════════════════════════
 //  PROFILI
