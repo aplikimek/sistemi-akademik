@@ -112,7 +112,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sy
   .main-wrap{margin-left:0}
   .grid2,.grid3{grid-template-columns:1fr!important}
   .metrics{grid-template-columns:repeat(2,1fr)!important}
-  .tbl-wrap{overflow-x:auto;-webkit-overflow-inviteUser(scrolling:touch}
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
   th,td{white-space:nowrap}
   .hide-mobile{display:none!important}
   .page{padding:1rem}
@@ -718,7 +718,7 @@ select:focus,input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 
 //  KONFIGURO SUPABASE — NDRYSHO KËTO DY VLERA!
 // ═══════════════════════════════════════════════════════════
 const SUPA_URL = 'https://waqimzkfsfxnwngbasfs.supabase.co';
-const SUPA_KEY = 'sb_publishable_0MdhpXPC-u1DqX2NDFm0sw_XSUSz6xe';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhcWltemtmc2Z4bnduZ2Jhc2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NDM3MTEsImV4cCI6MjA4OTUxOTcxMX0.qLb8gpqkqH6u5HYtSiFpU7RpT12h4frZSTbsyRNPeYQ';
 // ───────────────────────────────────────────────────────────
 
 const { createClient } = supabase;
@@ -1727,6 +1727,7 @@ async function inviteUser(){
   if(error){toast('Gabim: '+error.message,4000);return;}
   closeMo('mo-invite'); toast('✓ Ftesa u dërgua te '+email);
 }
+
 // ═══════════════════════════════════════════════════════════
 //  PROFILI
 // ═══════════════════════════════════════════════════════════
